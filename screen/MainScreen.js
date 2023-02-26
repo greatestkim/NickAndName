@@ -93,16 +93,16 @@ const ChildMenuContainer = styled(FlexBox).attrs({
   border-right-color: ${colorStyle.darkGray};
   position: absolute;
   top: 0;
-  left: ${Dimensions.get("window").width * 0.5};
+  left: ${Dimensions.get("window").width * 0.5}px;
   z-index: 15;
-  min-width: ${Dimensions.get("window").width * 0.4};
+  min-width: ${Dimensions.get("window").width * 0.4}px;
 `;
 
 const ParentsMenuItem = styled(FlexBox).attrs({
   justify: "space-between",
 })`
   background: ${(props) => props.backColor};
-  width: ${Dimensions.get("window").width * 0.5};
+  width: ${Dimensions.get("window").width * 0.5}px;
   min-height: 50px;
   margin: 0;
   padding-left: 5px;
