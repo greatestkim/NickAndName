@@ -1,19 +1,16 @@
 import { AntDesign, Entypo, Feather, MaterialIcons } from "@expo/vector-icons";
 import moment from "moment";
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Dimensions,
   Image,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableHighlight,
-  useWindowDimensions,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
-
+import styled from "styled-components/native";
 import { CustomText, FlexBox } from "../components";
 import { colorStyle } from "../lib/data/styleData";
 import { makeNameUtil } from "../lib/util";
@@ -21,12 +18,20 @@ import { makeNameUtil } from "../lib/util";
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    padding: 10,
     height: "100%",
     width: "100%",
     backgroundColor: colorStyle.backgroundColor,
   },
 });
+
+const BorderLine = styled(FlexBox)`
+  border-color: ${colorStyle.black};
+  border-width: 1;
+  border-style: dashed;
+  width: ${(props) => props.width};
+  height: 1;
+  margin-bottom: 10;
+`;
 
 export default function ReceiptScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -38,15 +43,11 @@ export default function ReceiptScreen({ navigation, route }) {
   const [isInit, setIsInit] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   const [borderLine, setBorderLine] = useState("");
+  const [borderLine2nd, setBorderLine2nd] = useState("");
   const [birthday, setBirthday] = useState("");
   const [signature, setSignature] = useState(route.params.signature);
 
-  const CURSOR_SIDE_SIZE = 20;
-  const CURSOR_HALF_SIDE_SIZE = CURSOR_SIDE_SIZE / 2;
-
-  const touch = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-
-  const dimensions = useWindowDimensions();
+  const [targetHeight, setTargetHeight] = useState(0);
 
   const getNewName = () => {
     const lastNameParams = Object.prototype.hasOwnProperty.call(
@@ -64,7 +65,7 @@ export default function ReceiptScreen({ navigation, route }) {
 
     setNameArr(() => {
       let temp = [...nameDefaultArr];
-      console.log("##temp", temp);
+
       let resultArr = temp.map((item, idx) => {
         let newKey = nameKeyArr[idx].replace(" name", "");
         return {
@@ -105,15 +106,18 @@ export default function ReceiptScreen({ navigation, route }) {
   useLayoutEffect(() => {
     if (windowWidth > 0) {
       let str = "";
-      for (let i = 0; i < (windowWidth - 80) / 8; i++) {
+      let str2nd = "";
+
+      for (let i = 0; i < (windowWidth - 20) / 9; i++) {
         str += "-";
+        if (i < ((windowWidth - 20) / 9) * 0.7) str2nd += "-";
       }
       setBorderLine(str);
+      setBorderLine2nd(str2nd);
     }
   }, [windowWidth]);
 
   useLayoutEffect(() => {
-    console.log("##nameDefaultArr", nameDefaultArr);
     if (typeof nameDefaultArr[0] !== "string") {
       setIsInit(true);
     }
@@ -157,18 +161,31 @@ export default function ReceiptScreen({ navigation, route }) {
     console.log("##totalName", totalName);
   }, [totalName]);
 
-  const generateRandomCode = () => {
+  const generateRandomCode = (n, type) => {
     let str = "";
-    for (let i = 0; i < 15; i++) {
-      str += Math.floor(Math.random() * 10);
-    }
+    if (type === "no.")
+      for (let i = 0; i < n; i++) {
+        str += Math.floor(Math.random() * 10);
+      }
+    else if (type === "barcode")
+      for (let i = 0; i < n; i++) {
+        str += Math.floor(Math.random() * 10);
+      }
+    //here
     return str;
   };
+
+  useEffect(() => {
+    console.log("##targetHeight", targetHeight);
+  }, [targetHeight]);
 
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <FlexBox justify="center" style={{ width: "100%", height: "100%" }}>
+        <FlexBox
+          justify="center"
+          style={{ width: windowWidth, height: "100%" }}
+        >
           <ActivityIndicator size="large" color={colorStyle.headerColor} />
         </FlexBox>
       ) : (
@@ -176,14 +193,297 @@ export default function ReceiptScreen({ navigation, route }) {
           contentContainerStyle={{
             flexGrow: 1,
             paddingTop: 20,
-            width: "100%",
+            width: windowWidth,
           }}
           directionalLockEnabled={true}
           showsHorizontalScrollIndicator={false}
           horizontal={false}
         >
-          <FlexBox direction="column" style={{ width: "100%" }}>
+          <FlexBox direction="column">
+            {/* header */}
             <FlexBox
+              direction="column"
+              style={{
+                width: windowWidth - 20,
+                marginBottom: 10,
+              }}
+            >
+              <FlexBox style={{ marginBottom: 10 }}>
+                <CustomText>* * * R E C E I P T * * *</CustomText>
+              </FlexBox>
+              <FlexBox>
+                <CustomText>{"No." + generateRandomCode(15, "no.")}</CustomText>
+              </FlexBox>
+            </FlexBox>
+
+            <BorderLine width={windowWidth - 20} />
+
+            <CustomText
+              fontSize={(windowWidth - 20) * 0.3}
+              style={{
+                width: targetHeight,
+                height: (windowWidth - 20) * 0.3,
+                lineHeight: (windowWidth - 20) * 0.3,
+                overflow: "hidden",
+                letterSpacing: -40,
+                backgroundColor: "pink",
+                textDecoration: "underline",
+              }}
+            >
+              RECEIPTFORYOU!
+            </CustomText>
+
+            {/* body */}
+            <FlexBox
+              style={{
+                width: windowWidth - 20,
+                marginBottom: 10,
+              }}
+            >
+              <FlexBox
+                style={{
+                  width: (windowWidth - 20) * 0.3,
+                  height: "100%",
+                  backgroundColor: "white",
+                }}
+                justify="center"
+              >
+                {/* <Text
+                  style={{
+                    fontFamily: "BarcodeFonts",
+                    fontSize: (windowWidth - 20) * 0.3 - 5,
+                    transform: [{ rotate: "90deg" }],
+                    width: targetHeight,
+                    height: (windowWidth - 20) * 0.3,
+                    overflow: "hidden",
+                  }}
+                >
+                  RECEIPTSPACEFORSOMEONE8895742365123543211Tttlakjdk
+                </Text> */}
+                <CustomText
+                  fontSize={(windowWidth - 20) * 0.4}
+                  style={{
+                    transform: [{ rotate: "90deg" }],
+                    width: targetHeight,
+                    height: (windowWidth - 20) * 0.3,
+                    lineHeight: (windowWidth - 20) * 0.3,
+                    overflow: "hidden",
+                    letterSpacing: -50,
+                    backgroundColor: "pink",
+                    textDecoration: "underline",
+                  }}
+                >
+                  RECEIPTFORYOU!
+                </CustomText>
+              </FlexBox>
+
+              <FlexBox
+                direction="column"
+                style={{
+                  width: (windowWidth - 20) * 0.7,
+                }}
+                onLayout={(event) => {
+                  const { x, y, width, height } = event.nativeEvent.layout;
+                  console.log("##x, y, width, height", x, y, width, height);
+                  setTargetHeight(height - 20);
+                }}
+              >
+                <FlexBox direction="column" style={{ width: "100%" }}>
+                  {Array.isArray(nameArr) &&
+                    nameArr.map((item) => (
+                      <FlexBox
+                        style={{
+                          padding: 5,
+
+                          width: "100%",
+                        }}
+                        key={item.key + " " + item.value}
+                        direction="column"
+                        align="flex-start"
+                      >
+                        <FlexBox
+                          justify="space-between"
+                          style={{
+                            marginBottom: 5,
+
+                            width: "100%",
+                          }}
+                        >
+                          <CustomText fontSize={15}>{item.key}</CustomText>
+                          <TouchableWithoutFeedback
+                            onPress={() => {}}
+                            style={{ marginLeft: 5 }}
+                          >
+                            <AntDesign name="copy1" size={20} color="black" />
+                          </TouchableWithoutFeedback>
+                        </FlexBox>
+
+                        <FlexBox justify="flex-end">
+                          <CustomText fontWeight="bold">
+                            {item.value}
+                          </CustomText>
+                        </FlexBox>
+                      </FlexBox>
+                    ))}
+
+                  <FlexBox
+                    style={{
+                      padding: 10,
+
+                      width: "100%",
+                    }}
+                    direction="column"
+                    align="flex-start"
+                  >
+                    <FlexBox
+                      justify="space-between"
+                      style={{ marginBottom: 5 }}
+                    >
+                      <CustomText fontSize={15}>태어난 지</CustomText>
+                    </FlexBox>
+
+                    <FlexBox justify="flex-end">
+                      <CustomText fontWeight="bold">
+                        {`+${birthday}`}
+                      </CustomText>
+                    </FlexBox>
+                  </FlexBox>
+                </FlexBox>
+
+                <BorderLine width={(windowWidth - 20) * 0.7} />
+
+                <FlexBox
+                  style={{
+                    padding: 10,
+                    width: "100%",
+                  }}
+                  direction="column"
+                  align="flex-start"
+                >
+                  <FlexBox
+                    justify="space-between"
+                    style={{ marginBottom: 10, width: "100%" }}
+                  >
+                    <CustomText fontSize={15}>total</CustomText>
+                    <TouchableWithoutFeedback
+                      onPress={() => {}}
+                      style={{ marginLeft: 5 }}
+                    >
+                      <AntDesign name="copy1" size={24} color="black" />
+                    </TouchableWithoutFeedback>
+                  </FlexBox>
+
+                  <FlexBox justify="flex-end">
+                    <CustomText fontWeight="bold">{totalName}</CustomText>
+                  </FlexBox>
+                </FlexBox>
+              </FlexBox>
+            </FlexBox>
+
+            <BorderLine width={windowWidth - 20} />
+
+            {/* footer     */}
+            <FlexBox
+              direction="column"
+              style={{
+                width: windowWidth - 20,
+              }}
+            >
+              {/* {signature !== "" && typeof signature === "string" && (
+                <FlexBox
+                  style={{
+                    width: windowWidth - 80,
+                    height: 250,
+                    marginTop: 10,
+                  }}
+                  direction="column"
+                  justify="center"
+                >
+                  <FlexBox
+                    style={{
+                      width: windowWidth - 80,
+                      height: 15,
+                      borderTopWidth: 1,
+                      borderLeftWidth: 1,
+                      borderRightWidth: 1,
+                      borderTopColor: colorStyle.black,
+                      borderBottomColor: colorStyle.black,
+                      borderRightColor: colorStyle.black,
+                    }}
+                  ></FlexBox>
+                  <ImageContainer>
+                    <Image
+                      resizeMode={"contain"}
+                      source={{ uri: signature }}
+                      style={{
+                        width: 200,
+                        height: 200,
+                      }}
+                    />
+                  </ImageContainer>
+
+                  <FlexBox
+                    style={{
+                      width: windowWidth - 80,
+                      height: 15,
+                      borderBottomWidth: 1,
+                      borderLeftWidth: 1,
+                      borderRightWidth: 1,
+                      borderBottomColor: colorStyle.black,
+                      borderBottomColor: colorStyle.black,
+                      borderRightColor: colorStyle.black,
+                    }}
+                  ></FlexBox>
+                </FlexBox>
+              )} */}
+              {signature !== "" && typeof signature === "string" && (
+                <Image
+                  resizeMode={"contain"}
+                  source={{ uri: signature }}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    borderWidth: 1,
+                    borderColor: colorStyle.black,
+                    marginBottom: 10,
+                  }}
+                />
+              )}
+            </FlexBox>
+
+            <BorderLine width={windowWidth - 20} />
+
+            <FlexBox
+              justify="space-between"
+              style={{ width: "100%", padding: 40, paddingTop: 0 }}
+            >
+              <TouchableWithoutFeedback
+                onPress={() => {}}
+                style={{ marginRight: 5 }}
+              >
+                <Entypo name="home" size={24} color="black" />
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback
+                onPress={handleRefresh}
+                style={{ marginRight: 5 }}
+              >
+                <Feather name="refresh-ccw" size={24} color="black" />
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback
+                onPress={() => {}}
+                style={{ marginRight: 5 }}
+              >
+                <Entypo name="share" size={24} color="black" />
+              </TouchableWithoutFeedback>
+              <TouchableWithoutFeedback
+                onPress={() => {}}
+                style={{ marginRight: 5 }}
+              >
+                <MaterialIcons name="save-alt" size={24} color="black" />
+              </TouchableWithoutFeedback>
+            </FlexBox>
+
+            {/* <FlexBox
               style={{
                 width: "100%",
                 paddingTop: 10,
@@ -253,7 +553,7 @@ export default function ReceiptScreen({ navigation, route }) {
                   nameArr.map((item) => (
                     <FlexBox
                       style={{
-                        width: Dimensions.get("window").width - 40,
+                        width: windowWidth - 40,
                         padding: 10,
                       }}
                       key={item.key + " " + item.value}
@@ -310,9 +610,7 @@ export default function ReceiptScreen({ navigation, route }) {
                   }}
                   justify="center"
                 >
-                  {/* <Text style={{ fontFamily: "BarcodeFonts", fontSize: 100 }}>
-                  {"889900044877671232"}
-                </Text> */}
+                  
                   <Text style={{ fontFamily: "BarcodeFonts", fontSize: 100 }}>
                     {"RECEIPTSPACEFORSOMEONE"}
                   </Text>
@@ -347,31 +645,29 @@ export default function ReceiptScreen({ navigation, route }) {
               {signature !== "" && typeof signature === "string" && (
                 <FlexBox
                   style={{
-                    width: 200,
-                    height: 200,
-                    backgroundColor: colorStyle.white,
+                    width: Dimensions.get("window").width - 80,
+                    height: 250,
+                    marginTop: 10,
+                    borderTopWidth: 1,
+                    borderBottomWidth: 1,
+                    borderTopColor: colorStyle.black,
+                    borderBottomColor: colorStyle.black,
                   }}
                   direction="column"
+                  justify="center"
                 >
                   <Image
                     resizeMode={"contain"}
                     source={{ uri: signature }}
                     style={{
-                      width: "100%",
-                      height: "100%",
-                      borderWidth: 2,
-                      borderTopColor: colorStyle.black,
-
-                      borderLeftColor: colorStyle.black,
-
-                      borderBottomColor: colorStyle.white,
-
-                      borderRightColor: colorStyle.white,
+                      width: 200,
+                      height: 200,
+                      backgroundColor: colorStyle.white,
                     }}
                   />
                 </FlexBox>
               )}
-            </FlexBox>
+            </FlexBox> */}
           </FlexBox>
         </ScrollView>
       )}

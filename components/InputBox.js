@@ -20,35 +20,32 @@ const StyledTextInput = styled(TextInput)`
   outline: none;
   width: 100%;
   caret-color: ${colorStyle.darkGray};
-  ${(props) => props.multiline && `min-height: 100px;`}
+  ${(props) => props.multiline && `height: 150px;`}
 `;
 
-export const InputBox = ({
-  title,
-  textValue,
-  changeCallback,
-  multiline,
-  focusCallback,
-}) => {
+export const InputBox = ({ title, textValue, changeCallback, multiline }) => {
   return (
     <FlexBox
       style={{ width: "100%", marginBottom: 10 }}
       justify="space-between"
       align="flex-start"
     >
-      <CustomText style={{ flex: 3 }}>{title}</CustomText>
+      <CustomText style={{ flex: 3, paddingTop: 3 }}>{title}</CustomText>
       <FlexBox style={{ flex: 7 }}>
         <StyledTextInput
+          textAlignVertical="top"
           onChangeText={changeCallback}
           value={textValue}
           multiline={multiline}
           numberOfLines={multiline ? 4 : 1}
           disableFullscreenUI={true}
           returnKeyType={"done"}
-          scrollEnabled={true}
           cursorColor={colorStyle.darkGray}
           selectionColor={colorStyle.darkGray}
-          //   onFocus={focusCallback}
+          underlineColorAndroid={colorStyle.darkGray}
+          placeholderTextColor={colorStyle.darkGray}
+          placeholder={multiline ? "자랑 해주세요." : "입력 해주세요."}
+          scrollEnabled={multiline}
         />
       </FlexBox>
     </FlexBox>

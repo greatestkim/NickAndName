@@ -112,7 +112,7 @@ const ChildMenuItem = styled(FlexBox).attrs({
   justify: "flex-start",
 })`
   background: ${colorStyle.backgroundColor};
-  width: 100%;
+  width: ${Dimensions.get("window").width * 0.4}px;
   min-height: 40px;
   position: relative;
   z-index: 15;
@@ -241,10 +241,6 @@ export default function MainScreen({ navigation }) {
   useEffect(() => {
     if (!isShowMenu) setIsShowChildMenu("");
   }, [isShowMenu]);
-
-  useEffect(() => {
-    console.log("##windowVisible", windowVisible);
-  }, [windowVisible]);
 
   useEffect(() => {
     if (windowDelete) setWindowVisible(false);

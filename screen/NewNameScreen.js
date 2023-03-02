@@ -226,7 +226,6 @@ export default function NewNameScreen({ navigation }) {
   };
 
   const handleSave = () => {
-    console.log("##save", signature);
     let _middleName = middleNameItems[0].isChecked;
 
     let cnt = 0;
@@ -344,7 +343,7 @@ export default function NewNameScreen({ navigation }) {
     const _signature = signature;
     if (signRef && signRef.current) {
       signRef.current.readSignature();
-      console.log("##1", signRef.current);
+
       setSign(_signature);
       setScrollEnabled(true);
     }
@@ -353,13 +352,14 @@ export default function NewNameScreen({ navigation }) {
   const handleClear = () => {
     signRef.current.clearSignature();
     setSign("");
-    console.log("##2");
+
     setScrollEnabled(true);
-    console.log("##clear success!");
   };
 
   useEffect(() => {
-    console.log("##signature", typeof signature, signature);
+    if (typeof signature === "string" && signature !== "") {
+      setSignModalVisible(false);
+    }
   }, [signature]);
 
   return (
@@ -440,7 +440,7 @@ export default function NewNameScreen({ navigation }) {
               align="flex-start"
               justify="space-between"
             >
-              <FlexBox style={{ flex: 3 }}>
+              <FlexBox style={{ flex: 3, paddingTop: 3 }}>
                 <CustomText>{"생일"}</CustomText>
                 <CustomText color={colorStyle.headerColor}>{"*"}</CustomText>
               </FlexBox>
@@ -565,14 +565,6 @@ export default function NewNameScreen({ navigation }) {
                     style={{
                       width: "100%",
                       height: "100%",
-                      borderTopWidth: 2,
-                      borderTopColor: colorStyle.black,
-                      borderLeftWidth: 2,
-                      borderLeftColor: colorStyle.black,
-                      borderBottomWidth: 2,
-                      borderBottomColor: colorStyle.white,
-                      borderRightWidth: 2,
-                      borderRightColor: colorStyle.white,
                     }}
                   />
                 </FlexBox>

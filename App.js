@@ -108,6 +108,7 @@ export default function App() {
               name="IdCardMain"
               component={IdCardMain}
               options={{
+                headerBackTitleVisible: false,
                 headerTitle: (props) => (
                   <CustomText color={colorStyle.white} {...props} />
                 ),
