@@ -142,7 +142,14 @@ export default function MainScreen({ navigation }) {
     {
       id: 1,
       name: "Find",
-      child: null,
+      child: [
+        {
+          id: 0,
+          name: "ready to open",
+          parents: "Find",
+          icon: "do-not-touch",
+        },
+      ],
       icon: "find-in-page",
     },
     {
@@ -169,14 +176,8 @@ export default function MainScreen({ navigation }) {
     {
       id: 3,
       name: "App Info",
-      child: [
-        {
-          id: 0,
-          name: "ready to open",
-          parents: "App Info",
-          icon: "do-not-touch",
-        },
-      ],
+      child: null,
+      nav: "AppInfoMain",
       icon: "info-outline",
     },
     {
@@ -264,7 +265,7 @@ export default function MainScreen({ navigation }) {
               fontWeight="Bold"
               color={colorStyle.backgroundColor}
             >
-              NICK and Name
+              Nick's name Maker
             </CustomText>
           </FlexBox>
 
@@ -336,7 +337,11 @@ export default function MainScreen({ navigation }) {
                       {menuItem.name === "New" ? <BorderLine /> : <></>}
                       <TouchableHighlight
                         onPress={() => {
-                          setIsShowChildMenu(menuItem.name);
+                          if (menuItem.nav) {
+                            setIsShowMenu(false);
+                            navigation.navigate(menuItem.nav);
+                          } else if (menuItem.child)
+                            setIsShowChildMenu(menuItem.name);
                         }}
                       >
                         <ParentsMenuItem

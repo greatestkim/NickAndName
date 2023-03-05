@@ -1,17 +1,28 @@
-import { AntDesign, Entypo, Feather, MaterialIcons } from "@expo/vector-icons";
+import {
+  AntDesign,
+  Entypo,
+  Feather,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import * as MediaLibrary from "expo-media-library";
 import moment from "moment";
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
   Image,
   ScrollView,
+  Share,
   StyleSheet,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import ViewShot, { captureRef } from "react-native-view-shot";
 import styled from "styled-components/native";
-import { CustomText, FlexBox } from "../components";
+import { CustomModal, CustomText, FlexBox } from "../components";
+import { Barcode } from "../components/Barcode";
 import { colorStyle } from "../lib/data/styleData";
 import { makeNameUtil } from "../lib/util";
 
@@ -22,15 +33,29 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: colorStyle.backgroundColor,
   },
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 22,
+  },
+  image: {
+    width: 200,
+    height: 200,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colorStyle.black,
+    borderRadius: 1,
+  },
 });
 
 const BorderLine = styled(FlexBox)`
   border-color: ${colorStyle.black};
-  border-width: 1;
+  border-width: 1px;
   border-style: dashed;
-  width: ${(props) => props.width};
-  height: 1;
-  margin-bottom: 10;
+  width: ${(props) => `${props.width}px`};
+  height: 1px;
+  margin-bottom: 10px;
 `;
 
 export default function ReceiptScreen({ navigation, route }) {
@@ -46,8 +71,17 @@ export default function ReceiptScreen({ navigation, route }) {
   const [borderLine2nd, setBorderLine2nd] = useState("");
   const [birthday, setBirthday] = useState("");
   const [signature, setSignature] = useState(route.params.signature);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [permissionStatus, requestPermission] = MediaLibrary.usePermissions();
+  const [isSaveBtnClicked, setIsSaveBtnClicked] = useState(false);
 
   const [targetHeight, setTargetHeight] = useState(0);
+  const [titleHeight, setTitleHeight] = useState(0);
+  const [titleWidth, setTitleWidth] = useState(0);
+  const [logoHeight, setLogoHeight] = useState(0);
+  const [logoWidth, setLogoWidth] = useState(0);
+
+  const screenShotRef = useRef();
 
   const getNewName = () => {
     const lastNameParams = Object.prototype.hasOwnProperty.call(
@@ -100,7 +134,6 @@ export default function ReceiptScreen({ navigation, route }) {
       const days = moment().diff(birthday, "days");
       return days;
     });
-    console.log("##route.params", route.params);
   }, []);
 
   useLayoutEffect(() => {
@@ -144,7 +177,6 @@ export default function ReceiptScreen({ navigation, route }) {
   }, [isLoading]);
 
   useLayoutEffect(() => {
-    console.log("##nameArr", nameArr);
     if (Array.isArray(nameArr) && nameArr.length > 0)
       setTotalName(() => {
         let result = "";
@@ -175,9 +207,73 @@ export default function ReceiptScreen({ navigation, route }) {
     return str;
   };
 
+  const copyToClipboard = async (text) => {
+    await Clipboard.setStringAsync(text);
+    setModalVisible(true);
+  };
+
+  const onShare = async () => {
+    const link =
+      Platform.OS === "ios"
+        ? "https://apps.apple.com/us"
+        : "https://play.google.com/store/";
+    //todo: my link
+    try {
+      const result = await Share.share({
+        message: link,
+      });
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // shared with activity type of result.activityType
+        } else {
+          // shared
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // dismissed
+      }
+    } catch (error) {
+      Alert.alert(error.message);
+    }
+  };
+
+  const onSave = () => {
+    if (
+      !permissionStatus.granted ||
+      permissionStatus.status === "undetermined"
+    ) {
+      requestPermission();
+      console.log("##request");
+    } else {
+      console.log("##before onSaveImageAsync");
+      onSaveImageAsync();
+    }
+  };
+  const onSaveImageAsync = async () => {
+    try {
+      const localUri = await captureRef(screenShotRef, {
+        height: 440,
+        quality: 1,
+      });
+      console.log("##here1");
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      console.log("##here2");
+      if (localUri) {
+        alert("Saved!");
+        setIsSaveBtnClicked(false);
+      }
+    } catch (e) {
+      console.log("##error onSaveImageAsync", e);
+    }
+  };
+
   useEffect(() => {
-    console.log("##targetHeight", targetHeight);
-  }, [targetHeight]);
+    console.log("##permissionStatus", permissionStatus);
+    if (
+      isSaveBtnClicked &&
+      (permissionStatus.granted || permissionStatus.status === "granted")
+    )
+      onSaveImageAsync();
+  }, [permissionStatus]);
 
   return (
     <View style={styles.container}>
@@ -192,144 +288,181 @@ export default function ReceiptScreen({ navigation, route }) {
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            paddingTop: 20,
+
             width: windowWidth,
           }}
           directionalLockEnabled={true}
           showsHorizontalScrollIndicator={false}
           horizontal={false}
         >
-          <FlexBox direction="column">
-            {/* header */}
+          <ViewShot
+            ref={screenShotRef}
+            options={{
+              fileName: "Nick's name Maker",
+              format: "jpg",
+              quality: 1,
+            }}
+          >
             <FlexBox
               direction="column"
               style={{
-                width: windowWidth - 20,
-                marginBottom: 10,
+                backgroundColor: colorStyle.backgroundColor,
+                paddingTop: 20,
               }}
             >
-              <FlexBox style={{ marginBottom: 10 }}>
-                <CustomText>* * * R E C E I P T * * *</CustomText>
-              </FlexBox>
-              <FlexBox>
-                <CustomText>{"No." + generateRandomCode(15, "no.")}</CustomText>
-              </FlexBox>
-            </FlexBox>
-
-            <BorderLine width={windowWidth - 20} />
-
-            <CustomText
-              fontSize={(windowWidth - 20) * 0.3}
-              style={{
-                width: targetHeight,
-                height: (windowWidth - 20) * 0.3,
-                lineHeight: (windowWidth - 20) * 0.3,
-                overflow: "hidden",
-                letterSpacing: -40,
-                backgroundColor: "pink",
-                textDecoration: "underline",
-              }}
-            >
-              RECEIPTFORYOU!
-            </CustomText>
-
-            {/* body */}
-            <FlexBox
-              style={{
-                width: windowWidth - 20,
-                marginBottom: 10,
-              }}
-            >
-              <FlexBox
-                style={{
-                  width: (windowWidth - 20) * 0.3,
-                  height: "100%",
-                  backgroundColor: "white",
-                }}
-                justify="center"
-              >
-                {/* <Text
-                  style={{
-                    fontFamily: "BarcodeFonts",
-                    fontSize: (windowWidth - 20) * 0.3 - 5,
-                    transform: [{ rotate: "90deg" }],
-                    width: targetHeight,
-                    height: (windowWidth - 20) * 0.3,
-                    overflow: "hidden",
-                  }}
-                >
-                  RECEIPTSPACEFORSOMEONE8895742365123543211Tttlakjdk
-                </Text> */}
-                <CustomText
-                  fontSize={(windowWidth - 20) * 0.4}
-                  style={{
-                    transform: [{ rotate: "90deg" }],
-                    width: targetHeight,
-                    height: (windowWidth - 20) * 0.3,
-                    lineHeight: (windowWidth - 20) * 0.3,
-                    overflow: "hidden",
-                    letterSpacing: -50,
-                    backgroundColor: "pink",
-                    textDecoration: "underline",
-                  }}
-                >
-                  RECEIPTFORYOU!
-                </CustomText>
-              </FlexBox>
-
+              {/* header */}
               <FlexBox
                 direction="column"
                 style={{
-                  width: (windowWidth - 20) * 0.7,
-                }}
-                onLayout={(event) => {
-                  const { x, y, width, height } = event.nativeEvent.layout;
-                  console.log("##x, y, width, height", x, y, width, height);
-                  setTargetHeight(height - 20);
+                  width: windowWidth - 20,
+                  marginBottom: 10,
                 }}
               >
-                <FlexBox direction="column" style={{ width: "100%" }}>
-                  {Array.isArray(nameArr) &&
-                    nameArr.map((item) => (
-                      <FlexBox
-                        style={{
-                          padding: 5,
+                <FlexBox
+                  style={{
+                    marginBottom: 20,
+                    borderRadius: 10,
+                    borderWidth: 10,
+                    borderColor: colorStyle.black,
+                    paddingTop: 10,
+                    paddingBottom: 10,
+                    paddingLeft: 20,
+                    paddingRight: 20,
+                    position: "relative",
+                  }}
+                  onLayout={(event) => {
+                    const { x, y, width, height } = event.nativeEvent.layout;
+                    setTitleWidth(width);
+                    setTitleHeight(height - 20);
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="slot-machine-outline"
+                    size={titleHeight}
+                    color="black"
+                    style={{
+                      opacity: 0.1,
+                      position: "absolute",
+                      zIndex: -5,
+                      left: titleWidth / 2 - titleHeight / 2,
+                    }}
+                  />
+                  <CustomText fontSize={40} fontWeight="bold">
+                    Nick's name Maker
+                  </CustomText>
+                </FlexBox>
+                <FlexBox style={{ marginBottom: 10 }}>
+                  <CustomText>* * * R E C E I P T * * *</CustomText>
+                </FlexBox>
+                <FlexBox>
+                  <CustomText>
+                    {"No." + generateRandomCode(15, "no.")}
+                  </CustomText>
+                </FlexBox>
+              </FlexBox>
 
-                          width: "100%",
-                        }}
-                        key={item.key + " " + item.value}
-                        direction="column"
-                        align="flex-start"
-                      >
+              <BorderLine width={windowWidth - 20} />
+
+              {/* body */}
+              <FlexBox
+                style={{
+                  width: windowWidth - 20,
+                  marginBottom: 10,
+                }}
+              >
+                <FlexBox
+                  style={{
+                    width: (windowWidth - 20) * 0.3,
+                    height: targetHeight,
+                  }}
+                  justify="center"
+                >
+                  <Barcode
+                    length={targetHeight}
+                    width={(windowWidth - 20) * 0.3}
+                  />
+                </FlexBox>
+
+                <FlexBox
+                  direction="column"
+                  style={{
+                    width: (windowWidth - 20) * 0.7,
+                  }}
+                  onLayout={(event) => {
+                    const { x, y, width, height } = event.nativeEvent.layout;
+
+                    setTargetHeight(height - 20);
+                  }}
+                >
+                  <FlexBox direction="column" style={{ width: "100%" }}>
+                    {Array.isArray(nameArr) &&
+                      nameArr.map((item) => (
                         <FlexBox
-                          justify="space-between"
                           style={{
-                            marginBottom: 5,
+                            padding: 5,
 
                             width: "100%",
                           }}
+                          key={item.key + " " + item.value}
+                          direction="column"
+                          align="flex-start"
                         >
-                          <CustomText fontSize={15}>{item.key}</CustomText>
-                          <TouchableWithoutFeedback
-                            onPress={() => {}}
-                            style={{ marginLeft: 5 }}
-                          >
-                            <AntDesign name="copy1" size={20} color="black" />
-                          </TouchableWithoutFeedback>
-                        </FlexBox>
+                          <FlexBox
+                            justify="space-between"
+                            style={{
+                              marginBottom: 5,
 
-                        <FlexBox justify="flex-end">
-                          <CustomText fontWeight="bold">
-                            {item.value}
-                          </CustomText>
+                              width: "100%",
+                            }}
+                          >
+                            <CustomText fontSize={15}>{item.key}</CustomText>
+                            <TouchableWithoutFeedback
+                              onPress={() => {
+                                copyToClipboard(item.value);
+                              }}
+                              style={{ marginLeft: 5 }}
+                            >
+                              <AntDesign name="copy1" size={20} color="black" />
+                            </TouchableWithoutFeedback>
+                          </FlexBox>
+
+                          <FlexBox justify="flex-end">
+                            <CustomText fontWeight="bold">
+                              {item.value}
+                            </CustomText>
+                          </FlexBox>
                         </FlexBox>
+                      ))}
+
+                    <FlexBox
+                      style={{
+                        padding: 10,
+
+                        width: "100%",
+                      }}
+                      direction="column"
+                      align="flex-start"
+                    >
+                      <FlexBox
+                        justify="space-between"
+                        style={{ marginBottom: 5 }}
+                      >
+                        <CustomText fontSize={15}>태어난 지</CustomText>
                       </FlexBox>
-                    ))}
+
+                      <FlexBox justify="flex-end">
+                        <CustomText fontWeight="bold">
+                          {`+${birthday}`}
+                        </CustomText>
+                      </FlexBox>
+                    </FlexBox>
+                  </FlexBox>
+
+                  <BorderLine width={(windowWidth - 20) * 0.7} />
 
                   <FlexBox
                     style={{
                       padding: 10,
-
                       width: "100%",
                     }}
                     direction="column"
@@ -337,338 +470,115 @@ export default function ReceiptScreen({ navigation, route }) {
                   >
                     <FlexBox
                       justify="space-between"
-                      style={{ marginBottom: 5 }}
+                      style={{ marginBottom: 10, width: "100%" }}
                     >
-                      <CustomText fontSize={15}>태어난 지</CustomText>
+                      <CustomText fontSize={15}>total</CustomText>
+                      <TouchableWithoutFeedback
+                        onPress={() => {
+                          copyToClipboard(totalName);
+                        }}
+                        style={{ marginLeft: 5 }}
+                      >
+                        <AntDesign name="copy1" size={24} color="black" />
+                      </TouchableWithoutFeedback>
                     </FlexBox>
 
                     <FlexBox justify="flex-end">
-                      <CustomText fontWeight="bold">
-                        {`+${birthday}`}
-                      </CustomText>
+                      <CustomText fontWeight="bold">{totalName}</CustomText>
                     </FlexBox>
                   </FlexBox>
                 </FlexBox>
-
-                <BorderLine width={(windowWidth - 20) * 0.7} />
-
-                <FlexBox
-                  style={{
-                    padding: 10,
-                    width: "100%",
-                  }}
-                  direction="column"
-                  align="flex-start"
-                >
-                  <FlexBox
-                    justify="space-between"
-                    style={{ marginBottom: 10, width: "100%" }}
-                  >
-                    <CustomText fontSize={15}>total</CustomText>
-                    <TouchableWithoutFeedback
-                      onPress={() => {}}
-                      style={{ marginLeft: 5 }}
-                    >
-                      <AntDesign name="copy1" size={24} color="black" />
-                    </TouchableWithoutFeedback>
-                  </FlexBox>
-
-                  <FlexBox justify="flex-end">
-                    <CustomText fontWeight="bold">{totalName}</CustomText>
-                  </FlexBox>
-                </FlexBox>
               </FlexBox>
-            </FlexBox>
 
-            <BorderLine width={windowWidth - 20} />
+              <BorderLine width={windowWidth - 20} />
 
-            {/* footer     */}
-            <FlexBox
-              direction="column"
-              style={{
-                width: windowWidth - 20,
-              }}
-            >
-              {/* {signature !== "" && typeof signature === "string" && (
-                <FlexBox
-                  style={{
-                    width: windowWidth - 80,
-                    height: 250,
-                    marginTop: 10,
-                  }}
-                  direction="column"
-                  justify="center"
-                >
-                  <FlexBox
-                    style={{
-                      width: windowWidth - 80,
-                      height: 15,
-                      borderTopWidth: 1,
-                      borderLeftWidth: 1,
-                      borderRightWidth: 1,
-                      borderTopColor: colorStyle.black,
-                      borderBottomColor: colorStyle.black,
-                      borderRightColor: colorStyle.black,
-                    }}
-                  ></FlexBox>
-                  <ImageContainer>
-                    <Image
-                      resizeMode={"contain"}
-                      source={{ uri: signature }}
-                      style={{
-                        width: 200,
-                        height: 200,
-                      }}
-                    />
-                  </ImageContainer>
-
-                  <FlexBox
-                    style={{
-                      width: windowWidth - 80,
-                      height: 15,
-                      borderBottomWidth: 1,
-                      borderLeftWidth: 1,
-                      borderRightWidth: 1,
-                      borderBottomColor: colorStyle.black,
-                      borderBottomColor: colorStyle.black,
-                      borderRightColor: colorStyle.black,
-                    }}
-                  ></FlexBox>
-                </FlexBox>
-              )} */}
-              {signature !== "" && typeof signature === "string" && (
-                <Image
-                  resizeMode={"contain"}
-                  source={{ uri: signature }}
-                  style={{
-                    width: 200,
-                    height: 200,
-                    borderWidth: 1,
-                    borderColor: colorStyle.black,
-                    marginBottom: 10,
-                  }}
-                />
-              )}
-            </FlexBox>
-
-            <BorderLine width={windowWidth - 20} />
-
-            <FlexBox
-              justify="space-between"
-              style={{ width: "100%", padding: 40, paddingTop: 0 }}
-            >
-              <TouchableWithoutFeedback
-                onPress={() => {}}
-                style={{ marginRight: 5 }}
-              >
-                <Entypo name="home" size={24} color="black" />
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback
-                onPress={handleRefresh}
-                style={{ marginRight: 5 }}
-              >
-                <Feather name="refresh-ccw" size={24} color="black" />
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback
-                onPress={() => {}}
-                style={{ marginRight: 5 }}
-              >
-                <Entypo name="share" size={24} color="black" />
-              </TouchableWithoutFeedback>
-              <TouchableWithoutFeedback
-                onPress={() => {}}
-                style={{ marginRight: 5 }}
-              >
-                <MaterialIcons name="save-alt" size={24} color="black" />
-              </TouchableWithoutFeedback>
-            </FlexBox>
-
-            {/* <FlexBox
-              style={{
-                width: "100%",
-                paddingTop: 10,
-                paddingRight: 10,
-                paddingLeft: 10,
-              }}
-              direction="column"
-            >
-              <CustomText
-                fontSize={40}
-                style={{ marginBottom: 30 }}
-                fontWeight="bold"
-              >
-                RECEIPT
-              </CustomText>
+              {/* footer     */}
               <FlexBox
-                direction="column"
-                style={{ width: "100%", padding: 10 }}
-                align="flex-start"
-              >
-                <CustomText>Address: 202 Present St., Imagine</CustomText>
-                <CustomText style={{ marginBottom: 10 }}>
-                  Tel: 0042-4559-8809
-                </CustomText>
-                <FlexBox justify="flex-end" style={{ width: "100%" }}>
-                  <TouchableHighlight
-                    onPress={handleRefresh}
-                    style={{ marginRight: 5 }}
-                  >
-                    <Feather name="refresh-ccw" size={24} color="black" />
-                  </TouchableHighlight>
-                  <TouchableHighlight
-                    onPress={() => {}}
-                    style={{ marginRight: 5 }}
-                  >
-                    <Entypo name="share" size={24} color="black" />
-                  </TouchableHighlight>
-                  <TouchableHighlight
-                    onPress={() => {}}
-                    style={{ marginRight: 5 }}
-                  >
-                    <MaterialIcons name="save-alt" size={24} color="black" />
-                  </TouchableHighlight>
-                </FlexBox>
-              </FlexBox>
-              <CustomText>
-                {typeof borderLine === "string"
-                  ? borderLine
-                  : "-------------------------------?"}
-              </CustomText>
-              <CustomText>{"No." + generateRandomCode()}</CustomText>
-              <CustomText>
-                {typeof borderLine === "string"
-                  ? borderLine
-                  : "-------------------------------?"}
-              </CustomText>
-            </FlexBox>
-
-            <FlexBox
-              direction="column"
-              style={{
-                padding: 10,
-              }}
-            >
-              <FlexBox direction="column" style={{ padding: 0 }}>
-                {Array.isArray(nameArr) &&
-                  nameArr.map((item) => (
-                    <FlexBox
-                      style={{
-                        width: windowWidth - 40,
-                        padding: 10,
-                      }}
-                      key={item.key + " " + item.value}
-                      justify="space-between"
-                    >
-                      <CustomText>{item.key}</CustomText>
-
-                      <CustomText>{item.value}</CustomText>
-                    </FlexBox>
-                  ))}
-
-                <FlexBox
-                  style={{
-                    width: Dimensions.get("window").width - 40,
-                    padding: 10,
-                  }}
-                  justify="space-between"
-                >
-                  <CustomText>태어난 지</CustomText>
-
-                  <CustomText>{`+${birthday}`}</CustomText>
-                </FlexBox>
-              </FlexBox>
-
-              <CustomText>
-                {typeof borderLine === "string"
-                  ? borderLine
-                  : "-------------------------------?"}
-              </CustomText>
-
-              <FlexBox
-                align="flex-start"
                 style={{
-                  width: "100%",
-                  padding: 10,
+                  width: windowWidth - 20,
+                  position: "relative",
                 }}
-                direction="column"
+                justify="center"
+                align="flex-end"
+                onLayout={(event) => {
+                  const { x, y, width, height } = event.nativeEvent.layout;
+                  setLogoWidth(width);
+                  setLogoHeight(height - 20);
+                }}
               >
-                <CustomText fontWeight="bold">total</CustomText>
-                <FlexBox style={{ width: "100%" }} justify="flex-end">
-                  <CustomText fontWeight="bold">{totalName}</CustomText>
-                  <TouchableHighlight
-                    onPress={() => {}}
-                    style={{ marginLeft: 5 }}
-                  >
-                    <AntDesign name="copy1" size={24} color="black" />
-                  </TouchableHighlight>
-                </FlexBox>
                 <FlexBox
                   style={{
-                    overflow: "hidden",
-                    marginTop: 10,
-                    width: "100%",
+                    position: "absolute",
+                    top: logoHeight / 4,
+                    left: logoWidth / 10,
+                    zIndex: -5,
+                    opacity: 0.1,
+                    width: "80%",
                   }}
-                  justify="center"
                 >
-                  
-                  <Text style={{ fontFamily: "BarcodeFonts", fontSize: 100 }}>
-                    {"RECEIPTSPACEFORSOMEONE"}
-                  </Text>
+                  <CustomText fontSize={30} fontWeight="bold">
+                    Nick's name Maker
+                  </CustomText>
                 </FlexBox>
-              </FlexBox>
-            </FlexBox>
 
-            <FlexBox
-              direction="column"
-              style={{
-                width: "100%",
-                paddingTop: 5,
-                paddingBottom: 10,
-                paddingRight: 10,
-                paddingLeft: 10,
-              }}
-            >
-              <CustomText>
-                {typeof borderLine === "string"
-                  ? borderLine
-                  : "-------------------------------?"}
-              </CustomText>
-              <CustomText style={{ marginBottom: 15 }} fontWeight="bold">
-                The day you have new identity
-              </CustomText>
-              <CustomText>
-                {typeof moment().format("YYYY-MM-DD") === "string"
-                  ? moment().format("YYYY-MM-DD")
-                  : ""}
-              </CustomText>
-
-              {signature !== "" && typeof signature === "string" && (
-                <FlexBox
-                  style={{
-                    width: Dimensions.get("window").width - 80,
-                    height: 250,
-                    marginTop: 10,
-                    borderTopWidth: 1,
-                    borderBottomWidth: 1,
-                    borderTopColor: colorStyle.black,
-                    borderBottomColor: colorStyle.black,
-                  }}
-                  direction="column"
-                  justify="center"
-                >
+                <CustomText style={{ marginBottom: 5, marginLeft: 20 }}>
+                  signature:{" "}
+                </CustomText>
+                {signature !== "" && typeof signature === "string" && (
                   <Image
                     resizeMode={"contain"}
                     source={{ uri: signature }}
-                    style={{
-                      width: 200,
-                      height: 200,
-                      backgroundColor: colorStyle.white,
-                    }}
+                    style={styles.image}
                   />
-                </FlexBox>
-              )}
-            </FlexBox> */}
-          </FlexBox>
+                )}
+              </FlexBox>
+
+              <BorderLine width={windowWidth - 20} />
+
+              <FlexBox
+                justify="space-between"
+                style={{ width: "100%", padding: 40, paddingTop: 10 }}
+              >
+                <TouchableWithoutFeedback
+                  onPress={() => {
+                    navigation.navigate("AppMain");
+                  }}
+                  style={{ marginRight: 5 }}
+                >
+                  <Entypo name="home" size={24} color="black" />
+                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback
+                  onPress={handleRefresh}
+                  style={{ marginRight: 5 }}
+                >
+                  <Feather name="refresh-ccw" size={24} color="black" />
+                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback
+                  onPress={onShare}
+                  style={{ marginRight: 5 }}
+                >
+                  <Entypo name="share" size={24} color="black" />
+                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback
+                  onPress={() => {
+                    onSave();
+                    setIsSaveBtnClicked(true);
+                  }}
+                  style={{ marginRight: 5 }}
+                >
+                  <MaterialIcons name="save-alt" size={24} color="black" />
+                </TouchableWithoutFeedback>
+              </FlexBox>
+            </FlexBox>
+          </ViewShot>
+          <View style={styles.centeredView}>
+            <CustomModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              msg="클립보드에 복사되었습니다."
+              title=""
+            />
+          </View>
         </ScrollView>
       )}
     </View>

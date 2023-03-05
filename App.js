@@ -1,15 +1,15 @@
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import { useFonts } from "expo-font";
+import React, { useLayoutEffect, useState } from "react";
+import { NativeModules, Platform, SafeAreaView } from "react-native";
 import BarcodeImg from "./assets/images/icons/barcode.png";
+import { CustomText } from "./components";
+import { colorStyle } from "./lib/data/styleData";
+import AppInfoMain from "./screen/AppInfoScreen.js";
 import IdCardMain from "./screen/IdCardScreen.js";
 import Main from "./screen/MainScreen.js";
 import NewNameMain from "./screen/NewNameScreen.js";
-// import ToDoMain from "./screen/ToDoListMainScreen.js";
-import { useFonts } from "expo-font";
-import { NativeModules, Platform, SafeAreaView } from "react-native";
-import { CustomText } from "./components";
-import { colorStyle } from "./lib/data/styleData";
 import ReceiptMain from "./screen/ReceiptScreen.js";
 const Stack = createNativeStackNavigator();
 
@@ -27,7 +27,7 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     Galmuri: require("./assets/fonts/Galmuri.ttf"),
     GalmuriBold: require("./assets/fonts/GalmuriBold.ttf"),
-    BarcodeFonts: require("./assets/fonts/LibreBarcodeEAN13Text-Regular.ttf"),
+    BarcodeFonts: require("./assets/fonts/free3of9.ttf"),
   });
   const [statusBarHeight, setStatusBarHeight] = useState(0);
   useLayoutEffect(() => {
@@ -37,9 +37,6 @@ export default function App() {
         })
       : null;
   }, []);
-  useEffect(() => {
-    console.log("##fontsLoaded", fontsLoaded);
-  }, [fontsLoaded]);
 
   if (!fontsLoaded)
     return (
@@ -119,18 +116,20 @@ export default function App() {
               }}
             />
 
-            {/* <Stack.Screen
-            name="AppMain"
-            component={AppMain}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="ToDoList"
-            component={ToDoMain}
-            options={{
-              title: "To Do List",
-            }}
-          />*/}
+            <Stack.Screen
+              name="AppInfoMain"
+              component={AppInfoMain}
+              options={{
+                headerBackTitleVisible: false,
+                headerTitle: (props) => (
+                  <CustomText color={colorStyle.white} {...props} />
+                ),
+                headerStyle: {
+                  backgroundColor: colorStyle.headerColor,
+                  height: 40,
+                },
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </>

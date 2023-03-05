@@ -394,7 +394,10 @@ export default function NewNameScreen({ navigation }) {
 
             {needIdCard ? (
               <FlexBox
-                style={{ width: "90%", marginBottom: 10 }}
+                style={{
+                  width: Dimensions.get("window").width * 0.9,
+                  marginBottom: 10,
+                }}
                 justify="space-between"
                 align="flex-start"
               >

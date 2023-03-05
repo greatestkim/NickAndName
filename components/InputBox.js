@@ -33,7 +33,7 @@ export const InputBox = ({ title, textValue, changeCallback, multiline }) => {
       <CustomText style={{ flex: 3, paddingTop: 3 }}>{title}</CustomText>
       <FlexBox style={{ flex: 7 }}>
         <StyledTextInput
-          textAlignVertical="top"
+          textAlignVertical={multiline ? "top" : "center"}
           onChangeText={changeCallback}
           value={textValue}
           multiline={multiline}
@@ -42,7 +42,6 @@ export const InputBox = ({ title, textValue, changeCallback, multiline }) => {
           returnKeyType={"done"}
           cursorColor={colorStyle.darkGray}
           selectionColor={colorStyle.darkGray}
-          underlineColorAndroid={colorStyle.darkGray}
           placeholderTextColor={colorStyle.darkGray}
           placeholder={multiline ? "자랑 해주세요." : "입력 해주세요."}
           scrollEnabled={multiline}
