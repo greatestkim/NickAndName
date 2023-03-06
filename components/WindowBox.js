@@ -1,33 +1,12 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet } from "react-native";
+import styled from "styled-components/native";
 import { colorStyle } from "../lib/data/styleData";
 import { CustomText } from "./CustomText";
 import { FlexBox } from "./FlexBox";
 
 const styles = StyleSheet.create({
-  centeredView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 22,
-  },
-  modalView: {
-    width: "80%",
-    borderBottomWidth: 1,
-    borderBottomColor: colorStyle.darkGray,
-    borderRightWidth: 1,
-    borderRightColor: colorStyle.darkGray,
-    backgroundColor: colorStyle.backgroundColor,
-    shadowColor: colorStyle.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
   closeBtn: {
     minWidth: 20,
     backgroundColor: colorStyle.backgroundColor,
@@ -40,15 +19,31 @@ const styles = StyleSheet.create({
   },
 });
 
+const ModalContainer = styled(FlexBox)`
+  width: 80%;
+  border-bottom-width: 1px;
+  border-bottom-color: ${colorStyle.darkGray};
+  border-right-width: 1px;
+  border-right-color: ${colorStyle.darkGray};
+  background-color: ${colorStyle.backgroundColor};
+  shadow-color: ${colorStyle.black};
+  box-shadow: 0 2px ${colorStyle.black};
+  shadow-opacity: 0.25;
+  shadow-radius: 4px;
+  elevation: 5;
+`;
+
 export const WindowBox = ({
   windowVisible,
   setWindowVisible,
   msg,
   title,
   setWindowDelete,
+
+  ...rest
 }) => {
   return (
-    <FlexBox style={styles.modalView} direction="column">
+    <ModalContainer direction="column">
       <FlexBox
         style={{
           backgroundColor: colorStyle.headerColor,
@@ -85,6 +80,6 @@ export const WindowBox = ({
       <FlexBox style={{ minHeight: 100, padding: 10 }} direction="column">
         {typeof msg === "string" ? <CustomText>{msg}</CustomText> : <>{msg}</>}
       </FlexBox>
-    </FlexBox>
+    </ModalContainer>
   );
 };

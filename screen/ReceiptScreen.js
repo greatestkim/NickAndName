@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -254,11 +255,15 @@ export default function ReceiptScreen({ navigation, route }) {
         height: 440,
         quality: 1,
       });
-      console.log("##here1");
+
       await MediaLibrary.saveToLibraryAsync(localUri);
-      console.log("##here2");
+
       if (localUri) {
-        alert("Saved!");
+        const msg =
+          Platform.OS === "ios"
+            ? "사진에 저장이 되었습니다."
+            : "갤러리에 저장이 되었습니다.";
+        alert(msg);
         setIsSaveBtnClicked(false);
       }
     } catch (e) {
@@ -267,7 +272,6 @@ export default function ReceiptScreen({ navigation, route }) {
   };
 
   useEffect(() => {
-    console.log("##permissionStatus", permissionStatus);
     if (
       isSaveBtnClicked &&
       (permissionStatus.granted || permissionStatus.status === "granted")

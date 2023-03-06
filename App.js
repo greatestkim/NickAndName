@@ -92,7 +92,7 @@ export default function App() {
                 headerBackTitleVisible: false,
                 headerTitle: (props) => (
                   <CustomText color={colorStyle.white} {...props}>
-                    ID Card
+                    Receipt
                   </CustomText>
                 ),
                 headerStyle: {
@@ -120,14 +120,7 @@ export default function App() {
               name="AppInfoMain"
               component={AppInfoMain}
               options={{
-                headerBackTitleVisible: false,
-                headerTitle: (props) => (
-                  <CustomText color={colorStyle.white} {...props} />
-                ),
-                headerStyle: {
-                  backgroundColor: colorStyle.headerColor,
-                  height: 40,
-                },
+                headerShown: false,
               }}
             />
           </Stack.Navigator>

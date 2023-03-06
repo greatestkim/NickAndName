@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
-// import navImg from "../assets/images/icons/navi_next.png";
-import { CustomText, WindowBox } from "../components";
+import {
+  SafeAreaView,
+  StyleSheet,
+  TouchableWithoutFeedback,
+} from "react-native";
+
+import { Feather } from "@expo/vector-icons";
+import { CustomText, FlexBox, WindowBox } from "../components";
+import { colorStyle } from "../lib/data/styleData";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "space-between",
-    // flexBasis: "column",
     padding: 20,
     height: "100%",
+    paddingTop: 40,
   },
 });
 
@@ -21,7 +26,7 @@ export default function AppInfoScreen({ navigation }) {
     if (windowDelete) navigation.navigate("AppMain");
   }, [windowDelete]);
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <WindowBox
         windowVisible="none"
         setWindowDelete={setWindowDelete}
@@ -43,10 +48,21 @@ export default function AppInfoScreen({ navigation }) {
               싶어 이렇게 앱을 만들게 되었습니다. 잠깐이나마 즐거우셨으면
               좋겠네요. 감사합니다!
             </CustomText>
+
+            <FlexBox style={{ padding: 10, width: "100%" }} justify="flex-end">
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <FlexBox>
+                  <CustomText fontSize={10} style={{ marginRight: 5 }}>
+                    {"개발자 커피 사주기 >"}
+                  </CustomText>
+                  <Feather name="coffee" size={30} color={colorStyle.black} />
+                </FlexBox>
+              </TouchableWithoutFeedback>
+            </FlexBox>
           </>
         }
         title="information"
       />
-    </View>
+    </SafeAreaView>
   );
 }

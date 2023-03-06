@@ -1,3 +1,9 @@
+import {
+  FontAwesome,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import Constants from "expo-constants";
 import React, { Fragment, useEffect, useState } from "react";
 import {
   Dimensions,
@@ -6,11 +12,14 @@ import {
   TouchableHighlight,
   TouchableWithoutFeedback,
 } from "react-native";
-// import navImg from "../assets/images/icons/navi_next.png";
-import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import Constants from "expo-constants";
 import styled from "styled-components/native";
-import { CustomText, FlexBox, WindowBox } from "../components";
+import {
+  CustomButton,
+  CustomText,
+  FlexBox,
+  InputBox,
+  WindowBox,
+} from "../components";
 import { colorStyle } from "../lib/data/styleData";
 import nameList from "../lib/nameCollection.json";
 import tmpNameList from "../lib/tmpCollection.json";
@@ -21,6 +30,7 @@ const MainContainer = styled(FlexBox).attrs({
 })`
   height: 100%;
   width: 100%;
+  position: relative;
 `;
 
 const ControlBar = styled(FlexBox).attrs({
@@ -124,6 +134,9 @@ export default function MainScreen({ navigation }) {
   const [isShowChildMenu, setIsShowChildMenu] = useState("");
   const [windowVisible, setWindowVisible] = useState(true);
   const [windowDelete, setWindowDelete] = useState(false);
+  const [inputWindowVisible, setInputWindowVisible] = useState(false);
+  const [inputWindowDelete, setInputWindowDelete] = useState(true);
+  const [nameText, setNameText] = useState("");
 
   const menuArr = [
     {
@@ -167,8 +180,8 @@ export default function MainScreen({ navigation }) {
           id: 1,
           name: "ID Card",
           icon: "badge",
-          nav: "IdCardMain",
           parents: "New",
+          nav: "setInputWindowVisible",
         },
       ],
       icon: "fiber-new",
@@ -247,6 +260,14 @@ export default function MainScreen({ navigation }) {
     if (windowDelete) setWindowVisible(false);
   }, [windowDelete]);
 
+  useEffect(() => {
+    if (inputWindowDelete) setInputWindowVisible(false);
+  }, [inputWindowDelete]);
+
+  useEffect(() => {
+    if (inputWindowVisible) setInputWindowDelete(false);
+  }, [inputWindowVisible]);
+
   return (
     <SafeAreaView
       style={{
@@ -268,6 +289,46 @@ export default function MainScreen({ navigation }) {
               Nick's name Maker
             </CustomText>
           </FlexBox>
+
+          {inputWindowVisible ? (
+            <FlexBox
+              style={{
+                position: "absolute",
+                zIndex: 50,
+                top: Dimensions.get("window").height * 0.3,
+                left: 55,
+                width: "100%",
+              }}
+            >
+              <WindowBox
+                windowVisible={inputWindowVisible}
+                setWindowVisible={setInputWindowVisible}
+                setWindowDelete={setInputWindowDelete}
+                msg={
+                  <>
+                    <FlexBox direction="column" justify="center">
+                      <InputBox
+                        title="이름"
+                        changeCallback={setNameText}
+                        textValue={nameText}
+                      />
+                      <CustomButton
+                        text="done"
+                        pressCallback={() => {
+                          setInputWindowDelete(true);
+                          setNameText("");
+                          navigation.navigate("IdCardMain");
+                        }}
+                      />
+                    </FlexBox>
+                  </>
+                }
+                title="입력해주세요."
+              />
+            </FlexBox>
+          ) : (
+            <></>
+          )}
 
           {windowVisible ? (
             <WindowBox
@@ -307,6 +368,7 @@ export default function MainScreen({ navigation }) {
                 <CustomText>Start</CustomText>
               </StartBtn>
             </TouchableHighlight>
+
             {!windowDelete ? (
               <TouchableHighlight
                 onPress={() => {
@@ -329,6 +391,24 @@ export default function MainScreen({ navigation }) {
               <></>
             )}
 
+            {!inputWindowDelete ? (
+              <TouchableHighlight
+                onPress={() => {
+                  setInputWindowVisible((prev) => !prev);
+                }}
+                style={{ marginLeft: 5 }}
+              >
+                <StartBtn>
+                  <FontAwesome name="keyboard-o" size={24} color="black" />
+                  <CustomText style={{ paddingLeft: 3 }}>
+                    {"입력해..."}
+                  </CustomText>
+                </StartBtn>
+              </TouchableHighlight>
+            ) : (
+              <></>
+            )}
+
             {isShowMenu ? (
               <ParentsMenuContainer>
                 {menuArr.map((menuItem) => {
@@ -339,6 +419,8 @@ export default function MainScreen({ navigation }) {
                         onPress={() => {
                           if (menuItem.nav) {
                             setIsShowMenu(false);
+                            setInputWindowDelete(true);
+                            setNameText("");
                             navigation.navigate(menuItem.nav);
                           } else if (menuItem.child)
                             setIsShowChildMenu(menuItem.name);
@@ -400,9 +482,18 @@ export default function MainScreen({ navigation }) {
                                           <TouchableHighlight
                                             onPress={() => {
                                               setIsShowMenu(false);
-                                              navigation.navigate(
-                                                childItem.nav
-                                              );
+                                              if (
+                                                childItem.nav ===
+                                                "setInputWindowVisible"
+                                              )
+                                                setInputWindowVisible(true);
+                                              else {
+                                                setInputWindowDelete(true);
+                                                setNameText("");
+                                                navigation.navigate(
+                                                  childItem.nav
+                                                );
+                                              }
                                             }}
                                           >
                                             <ChildMenuItem>
