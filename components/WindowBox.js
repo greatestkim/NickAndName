@@ -39,16 +39,14 @@ export const WindowBox = ({
   msg,
   title,
   setWindowDelete,
-
   ...rest
 }) => {
   return (
-    <ModalContainer direction="column">
+    <ModalContainer direction="column" style={{ ...rest.style }}>
       <FlexBox
         style={{
           backgroundColor: colorStyle.headerColor,
           width: "100%",
-          paddingLeft: 10,
           borderTopWidth: 1,
           borderTopColor: colorStyle.white,
           borderLeftWidth: 1,
@@ -60,7 +58,15 @@ export const WindowBox = ({
         }}
         justify="space-between"
       >
-        <CustomText color="#dfffff">{title}</CustomText>
+        <FlexBox>
+          {typeof title === "string" ? (
+            <FlexBox style={{ paddingLeft: 10 }}>
+              <CustomText color={colorStyle.white}>{title}</CustomText>
+            </FlexBox>
+          ) : (
+            <>{title}</>
+          )}
+        </FlexBox>
         <FlexBox>
           {windowVisible !== "none" && (
             <FlexBox style={styles.closeBtn} justify="center">
@@ -77,9 +83,14 @@ export const WindowBox = ({
           </FlexBox>
         </FlexBox>
       </FlexBox>
-      <FlexBox style={{ minHeight: 100, padding: 10 }} direction="column">
-        {typeof msg === "string" ? <CustomText>{msg}</CustomText> : <>{msg}</>}
-      </FlexBox>
+
+      {typeof msg === "string" ? (
+        <FlexBox style={{ minHeight: 100, padding: 10 }} direction="column">
+          <CustomText>{msg}</CustomText>
+        </FlexBox>
+      ) : (
+        <>{msg}</>
+      )}
     </ModalContainer>
   );
 };

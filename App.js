@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import React, { useLayoutEffect, useState } from "react";
 import { NativeModules, Platform, SafeAreaView } from "react-native";
-import BarcodeImg from "./assets/images/icons/barcode.png";
+
 import { CustomText } from "./components";
 import { colorStyle } from "./lib/data/styleData";
 import AppInfoMain from "./screen/AppInfoScreen.js";
@@ -19,7 +19,6 @@ const MyTheme = {
     ...DefaultTheme.colors,
     background: colorStyle.windowBackColor,
   },
-  background: BarcodeImg,
 };
 
 export default function App() {
@@ -107,7 +106,9 @@ export default function App() {
               options={{
                 headerBackTitleVisible: false,
                 headerTitle: (props) => (
-                  <CustomText color={colorStyle.white} {...props} />
+                  <CustomText color={colorStyle.white} {...props}>
+                    ID Card
+                  </CustomText>
                 ),
                 headerStyle: {
                   backgroundColor: colorStyle.headerColor,

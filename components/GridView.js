@@ -100,52 +100,7 @@ export const GridView = ({ title, items, pressCallBack, isRequired }) => {
             <></>
           )}
         </FlexBox>
-        {/* <GridContainer>
-                    {items.map((item) => {
-                        return (
-                            <FlexBox
-                                onClick={(e) => {
-                                    pressCallBack(e, item.id);
-                                }}
-                                key={item.label}
-                                style={{ marginBottom: 10 }}
-                            >
-                                {item.isChecked ? (
-                                    <MaterialIcons
-                                        name="radio-button-checked"
-                                        size={24}
-                                        color="black"
-                                    />
-                                ) : (
-                                    <MaterialIcons
-                                        name="radio-button-unchecked"
-                                        size={24}
-                                        color="black"
-                                    />
-                                )}
-                                <FlexBox style={{ width: 5 }}></FlexBox>
-                                <FlexBox
-                                    style={{
-                                        width: 130,
-                                        height: 130,
-                                        borderWidth: 2,
-                                        borderColor: colorStyle.darkGray,
-                                        borderRadius: 10,
-                                    }}
-                                >
-                                    <Image
-                                        style={{
-                                            width: "100%",
-                                            height: "100%",
-                                            borderRadius: 10,
-                                        }}
-                                        source={item.img}
-                                    />
-                                </FlexBox>
-                            </FlexBox>
-                        );
-                    })}
-                </GridContainer> */}
+
         <PreviewLayout
           columnGap={columnGap}
           handleColumnGapChange={setColumnGap}

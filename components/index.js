@@ -1,3 +1,4 @@
+export * from "./Barcode";
 export * from "./CheckBox";
 export * from "./CustomButton";
 export * from "./CustomModal";

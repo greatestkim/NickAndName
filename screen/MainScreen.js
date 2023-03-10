@@ -1,18 +1,26 @@
-import {
-  FontAwesome,
-  MaterialCommunityIcons,
-  MaterialIcons,
-} from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import React, { Fragment, useEffect, useState } from "react";
 import {
   Dimensions,
+  Image,
   Platform,
   SafeAreaView,
   TouchableHighlight,
   TouchableWithoutFeedback,
 } from "react-native";
 import styled from "styled-components/native";
+import bear from "../assets/images/icons/bear.png";
+import file_pencil from "../assets/images/icons/file_pencil.png";
+import find from "../assets/images/icons/find_file.png";
+import hand from "../assets/images/icons/hand.png";
+import help from "../assets/images/icons/help.png";
+import keyboard from "../assets/images/icons/keyboard.png";
+import newImg from "../assets/images/icons/new.png";
+import no_permission from "../assets/images/icons/no_permission.png";
+import programs from "../assets/images/icons/programs.png";
+import settings from "../assets/images/icons/settings.png";
+import window_logo from "../assets/images/icons/window_logo.png";
 import {
   CustomButton,
   CustomText,
@@ -147,10 +155,10 @@ export default function MainScreen({ navigation }) {
           id: 0,
           name: "ready to open",
           parents: "Programs",
-          icon: "do-not-touch",
+          icon: no_permission,
         },
       ],
-      icon: "folder-open",
+      icon: programs,
     },
     {
       id: 1,
@@ -160,10 +168,10 @@ export default function MainScreen({ navigation }) {
           id: 0,
           name: "ready to open",
           parents: "Find",
-          icon: "do-not-touch",
+          icon: no_permission,
         },
       ],
-      icon: "find-in-page",
+      icon: find,
     },
     {
       id: 2,
@@ -172,26 +180,26 @@ export default function MainScreen({ navigation }) {
         {
           id: 0,
           name: "Name",
-          icon: "drive-file-rename-outline",
+          icon: file_pencil,
           nav: "NewNameMain",
           parents: "New",
         },
         {
           id: 1,
           name: "ID Card",
-          icon: "badge",
+          icon: bear,
           parents: "New",
           nav: "setInputWindowVisible",
         },
       ],
-      icon: "fiber-new",
+      icon: newImg,
     },
     {
       id: 3,
       name: "App Info",
       child: null,
       nav: "AppInfoMain",
-      icon: "info-outline",
+      icon: help,
     },
     {
       id: 4,
@@ -201,10 +209,10 @@ export default function MainScreen({ navigation }) {
           id: 0,
           name: "ready to open",
           parents: "Settings",
-          icon: "do-not-touch",
+          icon: no_permission,
         },
       ],
-      icon: "settings",
+      icon: settings,
     },
   ];
 
@@ -306,7 +314,11 @@ export default function MainScreen({ navigation }) {
                 setWindowDelete={setInputWindowDelete}
                 msg={
                   <>
-                    <FlexBox direction="column" justify="center">
+                    <FlexBox
+                      direction="column"
+                      justify="center"
+                      style={{ padding: 10 }}
+                    >
                       <InputBox
                         title="이름"
                         changeCallback={setNameText}
@@ -323,7 +335,24 @@ export default function MainScreen({ navigation }) {
                     </FlexBox>
                   </>
                 }
-                title="입력해주세요."
+                title={
+                  <>
+                    <FlexBox style={{ minHeight: 24 }}>
+                      <Image
+                        source={keyboard}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          marginRight: 3,
+                          marginLeft: 10,
+                        }}
+                      />
+                      <CustomText color={colorStyle.white}>
+                        입력해주세요.
+                      </CustomText>
+                    </FlexBox>
+                  </>
+                }
               />
             </FlexBox>
           ) : (
@@ -336,7 +365,7 @@ export default function MainScreen({ navigation }) {
               setWindowVisible={setWindowVisible}
               setWindowDelete={setWindowDelete}
               msg={
-                <>
+                <FlexBox style={{ padding: 10 }} direction="column">
                   <CustomText>{"새 이름을 원할 경우"}</CustomText>
                   <CustomText fontWeight="Bold">
                     {"Start > New > Name"}
@@ -346,9 +375,19 @@ export default function MainScreen({ navigation }) {
                   <CustomText fontWeight="Bold">
                     {"Start > New > ID Card"}
                   </CustomText>
+                </FlexBox>
+              }
+              title={
+                <>
+                  <FlexBox style={{ minHeight: 24 }}>
+                    <Image
+                      source={hand}
+                      style={{ width: 24, height: 24, marginRight: 3 }}
+                    />
+                    <CustomText color={colorStyle.white}>반가워요!</CustomText>
+                  </FlexBox>
                 </>
               }
-              title="반가워요!"
             />
           ) : (
             <></>
@@ -360,10 +399,9 @@ export default function MainScreen({ navigation }) {
               }}
             >
               <StartBtn>
-                <MaterialCommunityIcons
-                  name="microsoft-windows-classic"
-                  size={24}
-                  color="black"
+                <Image
+                  source={window_logo}
+                  style={{ width: 24, height: 24, marginRight: 3 }}
                 />
                 <CustomText>Start</CustomText>
               </StartBtn>
@@ -377,10 +415,9 @@ export default function MainScreen({ navigation }) {
                 style={{ marginLeft: 5 }}
               >
                 <StartBtn>
-                  <MaterialCommunityIcons
-                    name="hand-back-right-outline"
-                    size={24}
-                    color="black"
+                  <Image
+                    source={hand}
+                    style={{ width: 24, height: 24, marginRight: 3 }}
                   />
                   <CustomText style={{ paddingLeft: 3 }}>
                     {"반가워요!"}
@@ -399,7 +436,10 @@ export default function MainScreen({ navigation }) {
                 style={{ marginLeft: 5 }}
               >
                 <StartBtn>
-                  <FontAwesome name="keyboard-o" size={24} color="black" />
+                  <Image
+                    source={keyboard}
+                    style={{ width: 24, height: 24, marginRight: 3 }}
+                  />
                   <CustomText style={{ paddingLeft: 3 }}>
                     {"입력해..."}
                   </CustomText>
@@ -435,15 +475,13 @@ export default function MainScreen({ navigation }) {
                           }
                         >
                           <FlexBox>
-                            <MaterialIcons
-                              name={menuItem.icon}
-                              size={24}
-                              color={
-                                menuItem.name === isShowChildMenu
-                                  ? colorStyle.white
-                                  : colorStyle.black
-                              }
-                              style={{ marginRight: 5 }}
+                            <Image
+                              source={menuItem.icon}
+                              style={{
+                                width: 24,
+                                height: 24,
+                                marginRight: 5,
+                              }}
                             />
                             <CustomText
                               color={
@@ -497,11 +535,11 @@ export default function MainScreen({ navigation }) {
                                             }}
                                           >
                                             <ChildMenuItem>
-                                              <MaterialIcons
-                                                name={childItem.icon}
-                                                size={24}
-                                                color="black"
+                                              <Image
+                                                source={childItem.icon}
                                                 style={{
+                                                  width: 24,
+                                                  height: 24,
                                                   marginRight: 7,
                                                 }}
                                               />
@@ -512,11 +550,11 @@ export default function MainScreen({ navigation }) {
                                           </TouchableHighlight>
                                         ) : (
                                           <ChildMenuItem>
-                                            <MaterialIcons
-                                              name={childItem.icon}
-                                              size={24}
-                                              color="black"
+                                            <Image
+                                              source={childItem.icon}
                                               style={{
+                                                width: 24,
+                                                height: 24,
                                                 marginRight: 7,
                                               }}
                                             />

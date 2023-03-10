@@ -22,8 +22,7 @@ import {
 } from "react-native";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import styled from "styled-components/native";
-import { CustomModal, CustomText, FlexBox } from "../components";
-import { Barcode } from "../components/Barcode";
+import { Barcode, CustomModal, CustomText, FlexBox } from "../components";
 import { colorStyle } from "../lib/data/styleData";
 import { makeNameUtil } from "../lib/util";
 
@@ -384,6 +383,7 @@ export default function ReceiptScreen({ navigation, route }) {
                   <Barcode
                     length={targetHeight}
                     width={(windowWidth - 20) * 0.3}
+                    n={3}
                   />
                 </FlexBox>
 
