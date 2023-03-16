@@ -3,8 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import React, { useLayoutEffect, useState } from "react";
 import { NativeModules, Platform, SafeAreaView } from "react-native";
-
-import { CustomText } from "./components";
+import { CustomText, FlexBox } from "./components";
 import { colorStyle } from "./lib/data/styleData";
 import AppInfoMain from "./screen/AppInfoScreen.js";
 import IdCardMain from "./screen/IdCardScreen.js";
@@ -43,9 +42,12 @@ export default function App() {
         style={{
           paddingTop: Platform.OS == "ios" ? 0 : statusBarHeight,
           backgroundColor: colorStyle.windowBackColor,
+          height: "100%",
         }}
       >
-        <CustomText>not loaded yet</CustomText>
+        <FlexBox style={{ width: "100%" }} justify="center">
+          <CustomText>not loaded yet</CustomText>
+        </FlexBox>
       </SafeAreaView>
     );
   else if (fontsLoaded)

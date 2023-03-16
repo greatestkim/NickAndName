@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableHighlight } from "react-native";
+import { Pressable } from "react-native";
 import styled from "styled-components/native";
 import { colorStyle } from "../lib/data/styleData";
 import { CustomText } from "./CustomText";
@@ -11,7 +11,9 @@ const StyledBox = styled(FlexBox)`
   border-right-color: ${colorStyle.darkGray};
   border-top-color: ${colorStyle.white};
   border-left-color: ${colorStyle.white};
-  background-color: ${colorStyle.backgroundColor};
+  background-color: ${(props) =>
+    props.disabled ? colorStyle.darkGray : colorStyle.backgroundColor};
+  opacity: ${(props) => (props.disabled ? 0.35 : 1)};
   padding-top: 3px;
   padding-bottom: 3px;
   padding-right: 5px;
@@ -19,12 +21,14 @@ const StyledBox = styled(FlexBox)`
   width: 100%;
 `;
 
-export const CustomButton = ({ text, pressCallback }) => {
+export const CustomButton = ({ text, pressCallback, disabled, ...rest }) => {
   return (
-    <TouchableHighlight onPress={pressCallback}>
-      <StyledBox>
-        <CustomText>{text}</CustomText>
+    <Pressable onPress={pressCallback} disabled={disabled}>
+      <StyledBox style={{ ...rest.style }} disabled={disabled}>
+        <CustomText color={disabled ? colorStyle.white : colorStyle.black}>
+          {text}
+        </CustomText>
       </StyledBox>
-    </TouchableHighlight>
+    </Pressable>
   );
 };

@@ -68,7 +68,12 @@ export const CustomModal = ({ modalVisible, setModalVisible, msg, title }) => {
             }}
             justify="space-between"
           >
-            <CustomText color="#dfffff">{title}</CustomText>
+            {typeof title === "string" ? (
+              <CustomText color={colorStyle.white}>{title}</CustomText>
+            ) : (
+              <>{title}</>
+            )}
+
             <FlexBox style={styles.closeBtn} justify="center">
               <Pressable onPress={() => setModalVisible(!modalVisible)}>
                 <CustomText>X</CustomText>

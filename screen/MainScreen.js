@@ -1,9 +1,14 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
+import moment from "moment";
 import React, { Fragment, useEffect, useState } from "react";
 import {
   Dimensions,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   SafeAreaView,
   TouchableHighlight,
@@ -13,6 +18,7 @@ import styled from "styled-components/native";
 import bear from "../assets/images/icons/bear.png";
 import file_pencil from "../assets/images/icons/file_pencil.png";
 import find from "../assets/images/icons/find_file.png";
+import folder from "../assets/images/icons/folder_32.png";
 import hand from "../assets/images/icons/hand.png";
 import help from "../assets/images/icons/help.png";
 import keyboard from "../assets/images/icons/keyboard.png";
@@ -22,13 +28,14 @@ import programs from "../assets/images/icons/programs.png";
 import settings from "../assets/images/icons/settings.png";
 import window_logo from "../assets/images/icons/window_logo.png";
 import {
+  BottomSheet,
   CustomButton,
   CustomText,
   FlexBox,
   InputBox,
   WindowBox,
 } from "../components";
-import { colorStyle } from "../lib/data/styleData";
+import { colorStyle, randomImgList } from "../lib/data/styleData";
 import nameList from "../lib/nameCollection.json";
 import tmpNameList from "../lib/tmpCollection.json";
 
@@ -51,6 +58,7 @@ const ControlBar = styled(FlexBox).attrs({
   border-top-color: ${colorStyle.white};
   padding: 2px;
   position: relative;
+  z-index: 42;
 `;
 
 const StartBtn = styled(FlexBox).attrs({})`
@@ -66,7 +74,7 @@ const StartBtn = styled(FlexBox).attrs({})`
   padding: 1px;
 `;
 
-const BorderLine = styled(FlexBox).attrs({})`
+export const BorderLine = styled(FlexBox).attrs({})`
   background: ${colorStyle.backgroundColor};
   border-top-width: 1px;
   border-top-color: ${colorStyle.white};
@@ -145,6 +153,55 @@ export default function MainScreen({ navigation }) {
   const [inputWindowVisible, setInputWindowVisible] = useState(false);
   const [inputWindowDelete, setInputWindowDelete] = useState(true);
   const [nameText, setNameText] = useState("");
+  const [locationText, setLocationText] = useState("");
+  const [birthdayText, setBirthdayText] = useState("");
+  const [birthdayError, setBirthdayError] = useState("");
+  const [photoSrc, setPhotoSrc] = useState("");
+  const [inputFocused, setInputtFocused] = useState(false);
+  const [pageIdx, setPageIdx] = useState(0);
+  const [nextDisabled, setNextDisabled] = useState(false);
+  const [permissionStatus, requestPermission] = MediaLibrary.usePermissions();
+  const [isPhotoBtnClicked, setIsPhotoBtnClicked] = useState(false);
+  const [btsVisible, setBtsVisible] = useState(false);
+  const photoSelArr = ["기본 사진 선택", "사진 라이브러리에서 선택"];
+  const [imgManageIdx, setImgManageIdx] = useState(0);
+
+  const pageArr = [
+    {
+      id: 0,
+      title: "이름",
+      placeholder: "예)구은재",
+      value: nameText,
+      setFunc: setNameText,
+      inputMode: "default",
+      buttonType: "next",
+    },
+    {
+      id: 1,
+      title: "지역",
+      placeholder: "예)동해",
+      value: locationText,
+      setFunc: setLocationText,
+      inputMode: "default",
+      buttonType: "next",
+    },
+    {
+      id: 2,
+      title: "생일",
+      placeholder: "예)19970324",
+      value: birthdayText,
+      setFunc: setBirthdayText,
+      inputMode: "numeric",
+      buttonType: "next",
+    },
+    {
+      id: 3,
+      title: "사진",
+      value: photoSrc,
+      setFunc: setPhotoSrc,
+      buttonType: "done",
+    },
+  ];
 
   const menuArr = [
     {
@@ -257,6 +314,11 @@ export default function MainScreen({ navigation }) {
     //nameFunc();
     return () => {
       setIsShowMenu(false);
+      setInputWindowDelete(true);
+      setNameText("");
+      setLocationText("");
+      setBirthdayText("");
+      setPhotoSrc("");
     };
   }, []);
 
@@ -269,12 +331,84 @@ export default function MainScreen({ navigation }) {
   }, [windowDelete]);
 
   useEffect(() => {
-    if (inputWindowDelete) setInputWindowVisible(false);
+    if (inputWindowDelete) {
+      setPageIdx(0);
+      setInputWindowVisible(false);
+      setNameText("");
+      setLocationText("");
+      setBirthdayText("");
+      setPhotoSrc("");
+    }
   }, [inputWindowDelete]);
+
+  useEffect(() => {
+    let isValidBirth = moment(birthdayText, "YYYYMMDD", true).isValid();
+
+    if (
+      (pageIdx === 0 && nameText.trim() === "") ||
+      (pageIdx === 1 && locationText.trim() === "") ||
+      (pageIdx === 2 && (birthdayText.trim() === "" || !isValidBirth)) ||
+      (pageIdx === 3 && photoSrc === "")
+    )
+      setNextDisabled(true);
+    else setNextDisabled(false);
+
+    if (!isValidBirth)
+      setBirthdayError("생년월일을 8자리 정수 형식으로 입력해주세요.");
+    else setBirthdayError("");
+  }, [pageIdx, locationText, nameText, birthdayText, photoSrc]);
 
   useEffect(() => {
     if (inputWindowVisible) setInputWindowDelete(false);
   }, [inputWindowVisible]);
+
+  useEffect(() => {
+    if (
+      isPhotoBtnClicked &&
+      (permissionStatus.granted || permissionStatus.status === "granted")
+    )
+      setBtsVisible(true);
+  }, [permissionStatus]);
+
+  const handleSelectPhoto = () => {
+    if (
+      !permissionStatus.granted ||
+      permissionStatus.status === "undetermined"
+    ) {
+      setIsPhotoBtnClicked(true);
+      requestPermission();
+    } else {
+      setBtsVisible(true);
+    }
+  };
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setPhotoSrc(result.assets[0].uri);
+      setBtsVisible(false);
+    }
+  };
+
+  const handleBts = (idx) => {
+    setImgManageIdx(idx);
+    if (idx === 0) {
+      setPhotoSrc(() => {
+        const leng = randomImgList.length;
+        const idx = Math.floor(Math.random() * (leng - 0));
+        return idx;
+      });
+      setBtsVisible(false);
+    } else if (idx === 1) pickImage();
+  };
 
   return (
     <SafeAreaView
@@ -282,258 +416,411 @@ export default function MainScreen({ navigation }) {
         paddingTop: Platform.OS === "ios" ? 0 : Constants.statusBarHeight,
       }}
     >
-      <TouchableWithoutFeedback
-        onPress={() => {
-          if (isShowMenu) setIsShowMenu(false);
-        }}
-      >
-        <MainContainer>
-          <FlexBox style={{ minHeight: 50 }}>
-            <CustomText
-              fontSize={20}
-              fontWeight="Bold"
-              color={colorStyle.backgroundColor}
-            >
-              Nick's name Maker
-            </CustomText>
-          </FlexBox>
-
-          {inputWindowVisible ? (
+      <KeyboardAvoidingView behavior="height">
+        <TouchableWithoutFeedback
+          onPress={() => {
+            if (isShowMenu) setIsShowMenu(false);
+            if (inputFocused) Keyboard.dismiss();
+          }}
+        >
+          <MainContainer>
+            <FlexBox style={{ minHeight: 50 }}>
+              <CustomText
+                fontSize={20}
+                fontWeight="Bold"
+                color={colorStyle.backgroundColor}
+              >
+                Nick's name Maker
+              </CustomText>
+            </FlexBox>
             <FlexBox
+              direction="column"
+              align="flex-start"
               style={{
                 position: "absolute",
-                zIndex: 50,
-                top: Dimensions.get("window").height * 0.3,
-                left: 55,
+                zIndex: 40,
+                top: 60,
+                left: 0,
                 width: "100%",
+                height: "100%",
+                padding: 20,
               }}
             >
-              <WindowBox
-                windowVisible={inputWindowVisible}
-                setWindowVisible={setInputWindowVisible}
-                setWindowDelete={setInputWindowDelete}
-                msg={
-                  <>
-                    <FlexBox
-                      direction="column"
-                      justify="center"
-                      style={{ padding: 10 }}
-                    >
-                      <InputBox
-                        title="이름"
-                        changeCallback={setNameText}
-                        textValue={nameText}
-                      />
-                      <CustomButton
-                        text="done"
-                        pressCallback={() => {
-                          setInputWindowDelete(true);
-                          setNameText("");
-                          navigation.navigate("IdCardMain");
-                        }}
-                      />
-                    </FlexBox>
-                  </>
-                }
-                title={
-                  <>
-                    <FlexBox style={{ minHeight: 24 }}>
-                      <Image
-                        source={keyboard}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          marginRight: 3,
-                          marginLeft: 10,
-                        }}
-                      />
-                      <CustomText color={colorStyle.white}>
-                        입력해주세요.
-                      </CustomText>
-                    </FlexBox>
-                  </>
-                }
-              />
-            </FlexBox>
-          ) : (
-            <></>
-          )}
-
-          {windowVisible ? (
-            <WindowBox
-              windowVisible={windowVisible}
-              setWindowVisible={setWindowVisible}
-              setWindowDelete={setWindowDelete}
-              msg={
-                <FlexBox style={{ padding: 10 }} direction="column">
-                  <CustomText>{"새 이름을 원할 경우"}</CustomText>
-                  <CustomText fontWeight="Bold">
-                    {"Start > New > Name"}
-                  </CustomText>
-                  <CustomText>{""}</CustomText>
-                  <CustomText>{"새 신분증을 원할 경우"}</CustomText>
-                  <CustomText fontWeight="Bold">
-                    {"Start > New > ID Card"}
+              <TouchableHighlight onPress={() => {}}>
+                <FlexBox
+                  direction="column"
+                  style={{ marginBottom: 10, marginLeft: 10 }}
+                >
+                  <Image
+                    source={folder}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      marginBottom: 2,
+                    }}
+                  />
+                  <CustomText
+                    color={colorStyle.white}
+                    style={{
+                      textOverflow: "ellipsis",
+                      width: 80,
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                    }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    연 가은dmdmdmdmdmdmdmdmdmdmddmdmddmdmddmdmdm
                   </CustomText>
                 </FlexBox>
-              }
-              title={
-                <>
-                  <FlexBox style={{ minHeight: 24 }}>
+              </TouchableHighlight>
+            </FlexBox>
+
+            {inputWindowVisible ? (
+              <FlexBox
+                style={{
+                  position: "absolute",
+                  zIndex: 50,
+                  top: Dimensions.get("window").height * 0.3,
+                  left: 55,
+                  width: "100%",
+                }}
+              >
+                <WindowBox
+                  windowVisible={inputWindowVisible}
+                  setWindowVisible={setInputWindowVisible}
+                  setWindowDelete={setInputWindowDelete}
+                  msg={
+                    <>
+                      <FlexBox
+                        direction="column"
+                        justify="center"
+                        style={{ padding: 10 }}
+                      >
+                        {pageArr.map((pageItem, idx) => {
+                          if (pageIdx === pageItem.id)
+                            return (
+                              <Fragment key={idx + ". " + pageItem.title}>
+                                {pageItem.id < 3 && (
+                                  <InputBox
+                                    title={pageItem.title}
+                                    changeCallback={pageItem.setFunc}
+                                    textValue={pageItem.value}
+                                    placeholder={pageItem.placeholder}
+                                    inputMode={pageItem.inputMode}
+                                    onFocus={(e) => {
+                                      setInputtFocused(true);
+                                    }}
+                                    onBlur={(e) => {
+                                      setInputtFocused(false);
+                                    }}
+                                    autoFocus={true}
+                                  />
+                                )}
+                                {pageItem.id === 2 && birthdayError !== "" && (
+                                  <FlexBox style={{ padding: 5 }}>
+                                    <CustomText color={colorStyle.warningColor}>
+                                      {birthdayError}
+                                    </CustomText>
+                                  </FlexBox>
+                                )}
+                                {pageItem.id === 3 && (
+                                  <FlexBox
+                                    style={{ width: "100%", marginBottom: 20 }}
+                                  >
+                                    <TouchableWithoutFeedback
+                                      onPress={handleSelectPhoto}
+                                    >
+                                      <FlexBox style={{ padding: 20 }}>
+                                        <MaterialIcons
+                                          name="photo-camera"
+                                          size={24}
+                                          color="black"
+                                        />
+                                      </FlexBox>
+                                    </TouchableWithoutFeedback>
+                                    {photoSrc !== "" ? (
+                                      <Image
+                                        style={{
+                                          width: 100,
+                                          height: 100,
+                                          marginRight: 5,
+                                        }}
+                                        source={
+                                          imgManageIdx === 0
+                                            ? randomImgList[photoSrc]
+                                            : { uri: photoSrc }
+                                        }
+                                      />
+                                    ) : (
+                                      <></>
+                                    )}
+                                  </FlexBox>
+                                )}
+                                <FlexBox>
+                                  {pageItem.id !== 0 && (
+                                    <>
+                                      <CustomButton
+                                        text="prev"
+                                        pressCallback={() => {
+                                          setPageIdx(idx - 1);
+                                        }}
+                                      />
+                                      <FlexBox
+                                        style={{ width: 100, height: 10 }}
+                                      ></FlexBox>
+                                    </>
+                                  )}
+                                  <CustomButton
+                                    text={pageItem.buttonType}
+                                    pressCallback={() => {
+                                      if (pageItem.buttonType === "done") {
+                                        navigation.navigate("IdCardMain", {
+                                          name: nameText,
+                                          photoIdx: imgManageIdx,
+                                          photo: photoSrc,
+                                          location: locationText,
+                                          birthday: birthdayText,
+                                        });
+                                        setInputWindowDelete(true);
+                                      } else setPageIdx(idx + 1);
+                                    }}
+                                    disabled={nextDisabled}
+                                  />
+                                </FlexBox>
+                              </Fragment>
+                            );
+                        })}
+                      </FlexBox>
+                    </>
+                  }
+                  title={
+                    <>
+                      <FlexBox style={{ minHeight: 24 }}>
+                        <Image
+                          source={keyboard}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            marginRight: 3,
+                            marginLeft: 10,
+                          }}
+                        />
+                        <CustomText color={colorStyle.white}>
+                          입력해주세요.
+                        </CustomText>
+                      </FlexBox>
+                    </>
+                  }
+                />
+              </FlexBox>
+            ) : (
+              <></>
+            )}
+
+            {windowVisible ? (
+              <FlexBox
+                style={{
+                  position: "absolute",
+                  zIndex: 49,
+                  top: Dimensions.get("window").height * 0.4,
+                  left: Dimensions.get("window").width * 0.1,
+                  width: "100%",
+                }}
+              >
+                <WindowBox
+                  windowVisible={windowVisible}
+                  setWindowVisible={setWindowVisible}
+                  setWindowDelete={setWindowDelete}
+                  msg={
+                    <FlexBox style={{ padding: 10 }} direction="column">
+                      <CustomText>{"새 이름을 원할 경우"}</CustomText>
+                      <CustomText fontWeight="Bold">
+                        {"Start > New > Name"}
+                      </CustomText>
+                      <CustomText>{""}</CustomText>
+                      <CustomText>{"새 신분증을 원할 경우"}</CustomText>
+                      <CustomText fontWeight="Bold">
+                        {"Start > New > ID Card"}
+                      </CustomText>
+                    </FlexBox>
+                  }
+                  title={
+                    <>
+                      <FlexBox style={{ minHeight: 24 }}>
+                        <Image
+                          source={hand}
+                          style={{ width: 24, height: 24, marginRight: 3 }}
+                        />
+                        <CustomText color={colorStyle.white}>
+                          반가워요!
+                        </CustomText>
+                      </FlexBox>
+                    </>
+                  }
+                />
+              </FlexBox>
+            ) : (
+              <></>
+            )}
+            <ControlBar>
+              <TouchableHighlight
+                onPress={() => {
+                  setIsShowMenu((prev) => !prev);
+                }}
+              >
+                <StartBtn>
+                  <Image
+                    source={window_logo}
+                    style={{ width: 24, height: 24, marginRight: 3 }}
+                  />
+                  <CustomText>Start</CustomText>
+                </StartBtn>
+              </TouchableHighlight>
+
+              {!windowDelete ? (
+                <TouchableHighlight
+                  onPress={() => {
+                    setWindowVisible((prev) => !prev);
+                  }}
+                  style={{ marginLeft: 5 }}
+                >
+                  <StartBtn>
                     <Image
                       source={hand}
                       style={{ width: 24, height: 24, marginRight: 3 }}
                     />
-                    <CustomText color={colorStyle.white}>반가워요!</CustomText>
-                  </FlexBox>
-                </>
-              }
-            />
-          ) : (
-            <></>
-          )}
-          <ControlBar>
-            <TouchableHighlight
-              onPress={() => {
-                setIsShowMenu((prev) => !prev);
-              }}
-            >
-              <StartBtn>
-                <Image
-                  source={window_logo}
-                  style={{ width: 24, height: 24, marginRight: 3 }}
-                />
-                <CustomText>Start</CustomText>
-              </StartBtn>
-            </TouchableHighlight>
+                    <CustomText style={{ paddingLeft: 3 }}>
+                      {"반가워요!"}
+                    </CustomText>
+                  </StartBtn>
+                </TouchableHighlight>
+              ) : (
+                <></>
+              )}
 
-            {!windowDelete ? (
-              <TouchableHighlight
-                onPress={() => {
-                  setWindowVisible((prev) => !prev);
-                }}
-                style={{ marginLeft: 5 }}
-              >
-                <StartBtn>
-                  <Image
-                    source={hand}
-                    style={{ width: 24, height: 24, marginRight: 3 }}
-                  />
-                  <CustomText style={{ paddingLeft: 3 }}>
-                    {"반가워요!"}
-                  </CustomText>
-                </StartBtn>
-              </TouchableHighlight>
-            ) : (
-              <></>
-            )}
+              {!inputWindowDelete ? (
+                <TouchableHighlight
+                  onPress={() => {
+                    setInputWindowVisible((prev) => !prev);
+                  }}
+                  style={{ marginLeft: 5 }}
+                >
+                  <StartBtn>
+                    <Image
+                      source={keyboard}
+                      style={{ width: 24, height: 24, marginRight: 3 }}
+                    />
+                    <CustomText style={{ paddingLeft: 3 }}>
+                      {"입력해..."}
+                    </CustomText>
+                  </StartBtn>
+                </TouchableHighlight>
+              ) : (
+                <></>
+              )}
 
-            {!inputWindowDelete ? (
-              <TouchableHighlight
-                onPress={() => {
-                  setInputWindowVisible((prev) => !prev);
-                }}
-                style={{ marginLeft: 5 }}
-              >
-                <StartBtn>
-                  <Image
-                    source={keyboard}
-                    style={{ width: 24, height: 24, marginRight: 3 }}
-                  />
-                  <CustomText style={{ paddingLeft: 3 }}>
-                    {"입력해..."}
-                  </CustomText>
-                </StartBtn>
-              </TouchableHighlight>
-            ) : (
-              <></>
-            )}
+              {isShowMenu ? (
+                <ParentsMenuContainer>
+                  {menuArr.map((menuItem) => {
+                    return (
+                      <Fragment key={menuItem.id + menuItem.name}>
+                        {menuItem.name === "New" ? <BorderLine /> : <></>}
+                        <TouchableHighlight
+                          onPress={() => {
+                            if (menuItem.nav) {
+                              setIsShowMenu(false);
+                              setInputWindowDelete(true);
 
-            {isShowMenu ? (
-              <ParentsMenuContainer>
-                {menuArr.map((menuItem) => {
-                  return (
-                    <Fragment key={menuItem.id + menuItem.name}>
-                      {menuItem.name === "New" ? <BorderLine /> : <></>}
-                      <TouchableHighlight
-                        onPress={() => {
-                          if (menuItem.nav) {
-                            setIsShowMenu(false);
-                            setInputWindowDelete(true);
-                            setNameText("");
-                            navigation.navigate(menuItem.nav);
-                          } else if (menuItem.child)
-                            setIsShowChildMenu(menuItem.name);
-                        }}
-                      >
-                        <ParentsMenuItem
-                          key={menuItem.id + menuItem.name}
-                          backColor={
-                            menuItem.name === isShowChildMenu
-                              ? colorStyle.headerColor
-                              : colorStyle.backgroundColor
-                          }
+                              navigation.navigate(menuItem.nav);
+                            } else if (menuItem.child)
+                              setIsShowChildMenu(menuItem.name);
+                          }}
                         >
-                          <FlexBox>
-                            <Image
-                              source={menuItem.icon}
-                              style={{
-                                width: 24,
-                                height: 24,
-                                marginRight: 5,
-                              }}
-                            />
-                            <CustomText
-                              color={
-                                menuItem.name === isShowChildMenu
-                                  ? colorStyle.white
-                                  : colorStyle.black
-                              }
-                            >
-                              {menuItem.name}
-                            </CustomText>
-                          </FlexBox>
-
-                          {menuItem.child ? (
-                            <>
-                              <MaterialIcons
-                                name="arrow-right"
-                                size={24}
+                          <ParentsMenuItem
+                            key={menuItem.id + menuItem.name}
+                            backColor={
+                              menuItem.name === isShowChildMenu
+                                ? colorStyle.headerColor
+                                : colorStyle.backgroundColor
+                            }
+                          >
+                            <FlexBox>
+                              <Image
+                                source={menuItem.icon}
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  marginRight: 5,
+                                }}
+                              />
+                              <CustomText
                                 color={
                                   menuItem.name === isShowChildMenu
                                     ? colorStyle.white
                                     : colorStyle.black
                                 }
-                                style={{ marginRight: 7 }}
-                              />
-                              {isShowChildMenu === menuItem.child[0].parents ? (
-                                <ChildMenuContainer>
-                                  {menuItem.child.map((childItem, idx) => {
-                                    return (
-                                      <Fragment
-                                        key={childItem.id + childItem.name}
-                                      >
-                                        {Object.prototype.hasOwnProperty.call(
-                                          childItem,
-                                          "nav"
-                                        ) ? (
-                                          <TouchableHighlight
-                                            onPress={() => {
-                                              setIsShowMenu(false);
-                                              if (
-                                                childItem.nav ===
-                                                "setInputWindowVisible"
-                                              )
-                                                setInputWindowVisible(true);
-                                              else {
-                                                setInputWindowDelete(true);
-                                                setNameText("");
-                                                navigation.navigate(
-                                                  childItem.nav
-                                                );
-                                              }
-                                            }}
-                                          >
+                              >
+                                {menuItem.name}
+                              </CustomText>
+                            </FlexBox>
+
+                            {menuItem.child ? (
+                              <>
+                                <MaterialIcons
+                                  name="arrow-right"
+                                  size={24}
+                                  color={
+                                    menuItem.name === isShowChildMenu
+                                      ? colorStyle.white
+                                      : colorStyle.black
+                                  }
+                                  style={{ marginRight: 7 }}
+                                />
+                                {isShowChildMenu ===
+                                menuItem.child[0].parents ? (
+                                  <ChildMenuContainer>
+                                    {menuItem.child.map((childItem, idx) => {
+                                      return (
+                                        <Fragment
+                                          key={childItem.id + childItem.name}
+                                        >
+                                          {Object.prototype.hasOwnProperty.call(
+                                            childItem,
+                                            "nav"
+                                          ) ? (
+                                            <TouchableHighlight
+                                              onPress={() => {
+                                                setIsShowMenu(false);
+                                                if (
+                                                  childItem.nav ===
+                                                  "setInputWindowVisible"
+                                                )
+                                                  setInputWindowVisible(true);
+                                                else {
+                                                  setInputWindowDelete(true);
+
+                                                  navigation.navigate(
+                                                    childItem.nav
+                                                  );
+                                                }
+                                              }}
+                                            >
+                                              <ChildMenuItem>
+                                                <Image
+                                                  source={childItem.icon}
+                                                  style={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    marginRight: 7,
+                                                  }}
+                                                />
+                                                <CustomText>
+                                                  {childItem.name}
+                                                </CustomText>
+                                              </ChildMenuItem>
+                                            </TouchableHighlight>
+                                          ) : (
                                             <ChildMenuItem>
                                               <Image
                                                 source={childItem.icon}
@@ -547,53 +834,72 @@ export default function MainScreen({ navigation }) {
                                                 {childItem.name}
                                               </CustomText>
                                             </ChildMenuItem>
-                                          </TouchableHighlight>
-                                        ) : (
-                                          <ChildMenuItem>
-                                            <Image
-                                              source={childItem.icon}
-                                              style={{
-                                                width: 24,
-                                                height: 24,
-                                                marginRight: 7,
-                                              }}
-                                            />
-                                            <CustomText>
-                                              {childItem.name}
-                                            </CustomText>
-                                          </ChildMenuItem>
-                                        )}
+                                          )}
 
-                                        {idx !== menuItem.child.length - 1 ? (
-                                          <BorderLine />
-                                        ) : (
-                                          <></>
-                                        )}
-                                      </Fragment>
-                                    );
-                                  })}
-                                </ChildMenuContainer>
-                              ) : (
-                                <></>
-                              )}
-                            </>
-                          ) : (
-                            <></>
-                          )}
-                        </ParentsMenuItem>
-                      </TouchableHighlight>
+                                          {idx !== menuItem.child.length - 1 ? (
+                                            <BorderLine />
+                                          ) : (
+                                            <></>
+                                          )}
+                                        </Fragment>
+                                      );
+                                    })}
+                                  </ChildMenuContainer>
+                                ) : (
+                                  <></>
+                                )}
+                              </>
+                            ) : (
+                              <></>
+                            )}
+                          </ParentsMenuItem>
+                        </TouchableHighlight>
 
-                      {menuItem.name === "New" ? <BorderLine /> : <></>}
-                    </Fragment>
-                  );
-                })}
-              </ParentsMenuContainer>
-            ) : (
-              <></>
-            )}
-          </ControlBar>
-        </MainContainer>
-      </TouchableWithoutFeedback>
+                        {menuItem.name === "New" ? <BorderLine /> : <></>}
+                      </Fragment>
+                    );
+                  })}
+                </ParentsMenuContainer>
+              ) : (
+                <></>
+              )}
+            </ControlBar>
+          </MainContainer>
+        </TouchableWithoutFeedback>
+        <BottomSheet
+          btsVisible={btsVisible}
+          setBtsVisible={setBtsVisible}
+          header="사진 옵션 선택"
+          body={
+            <FlexBox direction="column" style={{ width: "100%" }}>
+              {photoSelArr.map((item, idx) => {
+                return (
+                  <Fragment key={item + " " + idx}>
+                    <TouchableHighlight
+                      activeOpacity={0.2}
+                      onPress={() => {
+                        handleBts(idx);
+                      }}
+                    >
+                      <FlexBox
+                        style={{
+                          minHeight: 50,
+                          paddingLeft: 5,
+                          width: "100%",
+                        }}
+                      >
+                        <CustomText>{item}</CustomText>
+                      </FlexBox>
+                    </TouchableHighlight>
+
+                    {idx === 0 ? <BorderLine /> : <></>}
+                  </Fragment>
+                );
+              })}
+            </FlexBox>
+          }
+        ></BottomSheet>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

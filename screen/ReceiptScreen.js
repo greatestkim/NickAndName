@@ -5,12 +5,14 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import * as MediaLibrary from "expo-media-library";
 import moment from "moment";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Platform,
@@ -60,21 +62,36 @@ const BorderLine = styled(FlexBox)`
 
 export default function ReceiptScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
-  const nameKeyArr = ["first name", "middle name", "last name"];
-  const [nameDefaultArr, setNameDefaultArr] = useState(nameKeyArr);
-  const [nameArr, setNameArr] = useState([]);
-  const [totalName, setTotalName] = useState("");
   const [isNameSet, setIsNameSet] = useState(false);
-  const [isInit, setIsInit] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(0);
-  const [borderLine, setBorderLine] = useState("");
-  const [borderLine2nd, setBorderLine2nd] = useState("");
+
+  const nameKeyArr = ["first name", "middle name", "last name"];
+  const [newName, setNewName] = useState([
+    {
+      id: 0,
+      key: "first name",
+      value: false,
+    },
+    {
+      id: 1,
+      key: "middle name",
+      value: false,
+    },
+    {
+      id: 2,
+      key: "last name",
+      value: false,
+    },
+  ]);
+
+  const [totalName, setTotalName] = useState("");
+
   const [birthday, setBirthday] = useState("");
   const [signature, setSignature] = useState(route.params.signature);
   const [modalVisible, setModalVisible] = useState(false);
   const [permissionStatus, requestPermission] = MediaLibrary.usePermissions();
   const [isSaveBtnClicked, setIsSaveBtnClicked] = useState(false);
 
+  const [windowWidth, setWindowWidth] = useState(0);
   const [targetHeight, setTargetHeight] = useState(0);
   const [titleHeight, setTitleHeight] = useState(0);
   const [titleWidth, setTitleWidth] = useState(0);
@@ -97,8 +114,8 @@ export default function ReceiptScreen({ navigation, route }) {
       route.params.vibe
     );
 
-    setNameArr(() => {
-      let temp = [...nameDefaultArr];
+    setNewName((prev) => {
+      let temp = [...prev];
 
       let resultArr = temp.map((item, idx) => {
         let newKey = nameKeyArr[idx].replace(" name", "");
@@ -114,16 +131,6 @@ export default function ReceiptScreen({ navigation, route }) {
   };
 
   useLayoutEffect(() => {
-    setNameDefaultArr((prev) => {
-      let temp = [...nameKeyArr];
-      return temp.map((item, idx) => {
-        return {
-          id: idx,
-          key: item,
-          value: "",
-        };
-      });
-    });
     setWindowWidth(Dimensions.get("window").width);
     setBirthday(() => {
       const newDate = {
@@ -136,62 +143,35 @@ export default function ReceiptScreen({ navigation, route }) {
     });
   }, []);
 
-  useLayoutEffect(() => {
-    if (windowWidth > 0) {
-      let str = "";
-      let str2nd = "";
-
-      for (let i = 0; i < (windowWidth - 20) / 9; i++) {
-        str += "-";
-        if (i < ((windowWidth - 20) / 9) * 0.7) str2nd += "-";
-      }
-      setBorderLine(str);
-      setBorderLine2nd(str2nd);
-    }
-  }, [windowWidth]);
-
-  useLayoutEffect(() => {
-    if (typeof nameDefaultArr[0] !== "string") {
-      setIsInit(true);
-    }
-  }, [nameDefaultArr]);
-
-  useLayoutEffect(() => {
-    if (isInit) getNewName();
-  }, [isInit]);
-
   const handleRefresh = () => {
     setIsLoading(true);
+    setIsNameSet(false);
   };
 
   useLayoutEffect(() => {
-    if (isNameSet) {
-      setIsLoading(false);
-    } else if (!isNameSet && isInit) getNewName();
-  }, [isNameSet]);
-
-  useLayoutEffect(() => {
     if (isLoading) {
-      setIsNameSet(false);
+      getNewName();
     }
   }, [isLoading]);
 
   useLayoutEffect(() => {
-    if (Array.isArray(nameArr) && nameArr.length > 0)
+    if (isNameSet) {
+      setIsLoading(false);
+    }
+  }, [isNameSet]);
+
+  useLayoutEffect(() => {
+    if (Array.isArray(newName) && newName.length > 0)
       setTotalName(() => {
         let result = "";
-        let reversedArr = nameArr.reverse();
+        let reversedArr = newName.reverse();
         reversedArr.forEach((item, idx) => {
-          result += item.value;
-          if (idx !== nameArr.length - 1) result += " ";
+          if (item.value) result += item.value;
+          if (idx !== newName.length - 1) result += " ";
         });
         return result;
       });
-  }, [nameArr]);
-
-  useLayoutEffect(() => {
-    console.log("##totalName", totalName);
-  }, [totalName]);
+  }, [newName]);
 
   const generateRandomCode = (n, type) => {
     let str = "";
@@ -242,9 +222,7 @@ export default function ReceiptScreen({ navigation, route }) {
       permissionStatus.status === "undetermined"
     ) {
       requestPermission();
-      console.log("##request");
     } else {
-      console.log("##before onSaveImageAsync");
       onSaveImageAsync();
     }
   };
@@ -262,8 +240,12 @@ export default function ReceiptScreen({ navigation, route }) {
           Platform.OS === "ios"
             ? "사진에 저장이 되었습니다."
             : "갤러리에 저장이 되었습니다.";
-        alert(msg);
+        Alert.alert(msg);
         setIsSaveBtnClicked(false);
+        storeData({
+          name: totalName,
+          content: localUri,
+        });
       }
     } catch (e) {
       console.log("##error onSaveImageAsync", e);
@@ -277,6 +259,31 @@ export default function ReceiptScreen({ navigation, route }) {
     )
       onSaveImageAsync();
   }, [permissionStatus]);
+
+  const storeData = async (value) => {
+    try {
+      let originData = getData();
+      console.log("##originData", originData);
+      const jsonValue = JSON.stringify(value);
+      if (Array.isArray(originData)) {
+        originData.push(jsonValue);
+        await AsyncStorage.setItem("@name_list", JSON.stringify(jsonValue));
+      } else {
+        await AsyncStorage.setItem("@name_list", JSON.stringify([jsonValue]));
+      }
+    } catch (e) {
+      // saving error
+    }
+  };
+
+  const getData = async () => {
+    try {
+      const jsonValue = await AsyncStorage.getItem("@name_list");
+      return jsonValue != null ? JSON.parse(jsonValue) : null;
+    } catch (e) {
+      // error reading value
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -399,44 +406,50 @@ export default function ReceiptScreen({ navigation, route }) {
                   }}
                 >
                   <FlexBox direction="column" style={{ width: "100%" }}>
-                    {Array.isArray(nameArr) &&
-                      nameArr.map((item) => (
-                        <FlexBox
-                          style={{
-                            padding: 5,
-
-                            width: "100%",
-                          }}
-                          key={item.key + " " + item.value}
-                          direction="column"
-                          align="flex-start"
-                        >
+                    {Array.isArray(newName) &&
+                      newName.map((item) => {
+                        if (!item.value) return <></>;
+                        return (
                           <FlexBox
-                            justify="space-between"
                             style={{
-                              marginBottom: 5,
-
+                              padding: 5,
                               width: "100%",
                             }}
+                            key={item.key + " " + item.value}
+                            direction="column"
+                            align="flex-start"
                           >
-                            <CustomText fontSize={15}>{item.key}</CustomText>
-                            <TouchableWithoutFeedback
-                              onPress={() => {
-                                copyToClipboard(item.value);
-                              }}
-                              style={{ marginLeft: 5 }}
-                            >
-                              <AntDesign name="copy1" size={20} color="black" />
-                            </TouchableWithoutFeedback>
-                          </FlexBox>
+                            <FlexBox
+                              justify="space-between"
+                              style={{
+                                marginBottom: 5,
 
-                          <FlexBox justify="flex-end">
-                            <CustomText fontWeight="bold">
-                              {item.value}
-                            </CustomText>
+                                width: "100%",
+                              }}
+                            >
+                              <CustomText fontSize={15}>{item.key}</CustomText>
+                              <TouchableWithoutFeedback
+                                onPress={() => {
+                                  copyToClipboard(item.value);
+                                }}
+                                style={{ marginLeft: 5 }}
+                              >
+                                <AntDesign
+                                  name="copy1"
+                                  size={20}
+                                  color="black"
+                                />
+                              </TouchableWithoutFeedback>
+                            </FlexBox>
+
+                            <FlexBox justify="flex-end">
+                              <CustomText fontWeight="bold">
+                                {item.value}
+                              </CustomText>
+                            </FlexBox>
                           </FlexBox>
-                        </FlexBox>
-                      ))}
+                        );
+                      })}
 
                     <FlexBox
                       style={{

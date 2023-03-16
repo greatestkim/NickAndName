@@ -6,6 +6,8 @@ export const CustomText = ({
   fontSize,
   fontWeight,
   color,
+  numberOfLines,
+  ellipsizeMode,
   ...rest
 }) => {
   return (
@@ -21,6 +23,8 @@ export const CustomText = ({
         // wordWrap: "break-word",
         ...rest.style,
       }}
+      numberOfLines={numberOfLines}
+      ellipsizeMode={ellipsizeMode}
     >
       {children}
     </Text>

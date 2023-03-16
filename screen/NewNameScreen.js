@@ -3,8 +3,10 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
 import moment from "moment";
-import React, { useEffect, useRef, useState } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -15,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  TouchableHighlight,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
@@ -23,17 +26,14 @@ import styled from "styled-components/native";
 import BlackImg from "../assets/images/BlackImg.jpg";
 import BlueImg from "../assets/images/BlueImg.jpg";
 import BrownImg from "../assets/images/BrownImg.jpg";
-import ExplodingImg from "../assets/images/Exploding.jpg";
 import GreenImg from "../assets/images/GreenImg.jpg";
-import NiceImg from "../assets/images/Nice.jpg";
+import warning from "../assets/images/icons/warning.png";
 import PinkImg from "../assets/images/PinkImg.jpg";
 import PurpleImg from "../assets/images/PurpleImg.jpg";
-import SayHiImg from "../assets/images/SayHi.jpg";
-import SickImg from "../assets/images/Sick.jpg";
 import WhiteImg from "../assets/images/WhiteImg.jpg";
-import WorkingImg from "../assets/images/Working.jpg";
 import YellowImg from "../assets/images/YellowImg.jpg";
 import {
+  BottomSheet,
   CheckBox,
   CustomModal,
   CustomText,
@@ -41,7 +41,8 @@ import {
   GridView,
   InputBox,
 } from "../components";
-import { colorStyle } from "../lib/data/styleData";
+import { colorStyle, randomImgList } from "../lib/data/styleData";
+import { BorderLine } from "./MainScreen";
 
 const styles = StyleSheet.create({
   container: {
@@ -130,11 +131,17 @@ export default function NewNameScreen({ navigation }) {
   ]);
   const [needIdCard, setNeedIdCard] = useState(false);
 
-  const randomImgList = [SickImg, SayHiImg, ExplodingImg, NiceImg, WorkingImg];
-
   const [imgSrc, setImgSrc] = useState("");
+  const [photoItems, setPhotoItems] = useState([
+    { id: 0, isChecked: true, label: "사용" },
+    { id: 1, isChecked: false, label: "안함" },
+  ]);
+  const photoSelArr = ["기본 사진 선택", "사진 라이브러리에서 선택"];
+  const [permissionStatus, requestPermission] = MediaLibrary.usePermissions();
+  const [isPhotoBtnClicked, setIsPhotoBtnClicked] = useState(false);
+  const [imgManageIdx, setImgManageIdx] = useState(0);
 
-  const [clubText, setClubText] = useState("");
+  const [locationText, setLocationText] = useState("");
 
   const [birthDayYearValue, setBirthDayYearValue] = useState(
     moment().format("YYYY")
@@ -165,6 +172,7 @@ export default function NewNameScreen({ navigation }) {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [signModalVisible, setSignModalVisible] = useState(false);
+  const [btsVisible, setBtsVisible] = useState(false);
 
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [signature, setSign] = useState("");
@@ -197,19 +205,71 @@ export default function NewNameScreen({ navigation }) {
     }
   };
 
+  const handlePhotoCheckBox = (e, idx) => {
+    let targetId = photoItems.findIndex((item) => idx === item.id);
+    if (!photoItems[targetId].isChecked) {
+      setPhotoItems((prev) => {
+        let temp = [...prev];
+        return temp.map((item) => {
+          if (item.id === idx) return { ...item, isChecked: true };
+          else return { ...item, isChecked: false };
+        });
+      });
+    }
+  };
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImgSrc(result.assets[0].uri);
+      setBtsVisible(false);
+    }
+  };
+
+  const handleBts = (idx) => {
+    setImgManageIdx(idx);
+    if (idx === 0) {
+      setImgSrc(() => {
+        const leng = randomImgList.length;
+        const idx = Math.floor(Math.random() * (leng - 0));
+        return idx;
+      });
+      setBtsVisible(false);
+    } else if (idx === 1) pickImage();
+  };
+
   const handleSelectPhoto = () => {
     //랜덤 이미지 넣기, 앨범에서 가져오기, 카메라로 찍기 보기 주고
     //랜덤 이미지면 랜덤 이미지 보여주고
     //만약 사진 접근 허용 되어 있으면 바로 앨범으로 이동
     //접근 허용 안되어있으면 접근 여부 모달
 
-    //test ver.
-    setImgSrc(() => {
-      const leng = randomImgList.length;
-      const idx = Math.floor(Math.random() * (leng - 0));
-      return randomImgList[idx];
-    });
+    if (
+      !permissionStatus.granted ||
+      permissionStatus.status === "undetermined"
+    ) {
+      setIsPhotoBtnClicked(true);
+      requestPermission();
+    } else {
+      setBtsVisible(true);
+    }
   };
+
+  useEffect(() => {
+    if (
+      isPhotoBtnClicked &&
+      (permissionStatus.granted || permissionStatus.status === "granted")
+    )
+      setBtsVisible(true);
+  }, [permissionStatus]);
 
   const handleSelectVibe = (e, idx) => {
     let targetId = vibeItems.findIndex((item) => idx === item.id);
@@ -228,41 +288,43 @@ export default function NewNameScreen({ navigation }) {
   const handleSave = () => {
     let _middleName = middleNameItems[0].isChecked;
 
-    let cnt = 0;
+    let vibeCnt = 0;
     let _vibe = "";
     vibeItems.forEach((item) => {
       if (item.isChecked) {
         _vibe = item.label;
-        cnt++;
+        vibeCnt++;
       }
     });
 
     if (
-      (needIdCard !== false && needIdCard !== true) ||
-      cnt === 0 ||
-      birthdayError !== "" ||
-      signature === ""
+      (!needIdCard && signature === "") ||
+      (needIdCard && locationText === "") || //todo: check photo
+      vibeCnt === 0 ||
+      birthdayError !== ""
     ) {
       setModalVisible(true);
     } else {
-      if (needIdCard) {
-        navigation.navigate("IdCardMain");
-      } else {
-        let params = {};
-        params = {
-          birthday: {
-            year: birthDayYearValue,
-            month: birthDayMonthValue,
-            day: birthDayValue,
-          },
-          vibe: _vibe,
-          middleName: _middleName,
-          signature: typeof signature === "string" ? signature : "",
-        };
+      let params = {};
+      params = {
+        birthday: {
+          year: birthDayYearValue,
+          month: birthDayMonthValue,
+          day: birthDayValue,
+        },
+        vibe: _vibe,
+        middleName: _middleName,
+      };
 
-        if (clubText.trim() !== "") params.club = clubText;
+      if (needIdCard) {
+        params.location = locationText;
+        params.photo = imgSrc;
+        params.photoIdx = imgManageIdx;
         if (lastNameText.trim() !== "") params.lastName = lastNameText;
-        if (advantageText.trim() !== "") params.advantage = advantageText;
+        navigation.navigate("IdCardMain", params);
+      } else {
+        params.signature = typeof signature === "string" ? signature : "";
+        if (lastNameText.trim() !== "") params.lastName = lastNameText;
 
         navigation.navigate("NameInReceipt", params);
       }
@@ -394,45 +456,57 @@ export default function NewNameScreen({ navigation }) {
 
             {needIdCard ? (
               <FlexBox
+                direction="column"
+                align="flex-end"
                 style={{
                   width: Dimensions.get("window").width * 0.9,
                   marginBottom: 10,
                 }}
-                justify="space-between"
-                align="flex-start"
               >
-                <CustomText>{"사진"}</CustomText>
-                <TouchableWithoutFeedback onPress={handleSelectPhoto}>
-                  <FlexBox align="flex-start">
-                    {imgSrc !== "" ? (
-                      <Image
-                        style={{
-                          width: 100,
-                          height: 100,
-                          marginRight: 5,
-                        }}
-                        source={imgSrc}
-                      />
-                    ) : (
-                      <></>
-                    )}
-
+                <FlexBox
+                  style={{ width: "100%", marginBottom: 10 }}
+                  justify="space-between"
+                  align="flex-start"
+                >
+                  <CustomText>{"사진"}</CustomText>
+                  <TouchableWithoutFeedback onPress={handleSelectPhoto}>
                     <MaterialIcons
                       name="photo-camera"
                       size={24}
                       color="black"
                     />
+                  </TouchableWithoutFeedback>
+                </FlexBox>
+
+                {imgSrc !== "" ? (
+                  <FlexBox justify="flex-end" style={{ width: "100%" }}>
+                    <Image
+                      style={{
+                        width: 100,
+                        height: 100,
+                        marginRight: 5,
+                      }}
+                      source={
+                        imgManageIdx === 0
+                          ? randomImgList[imgSrc]
+                          : { uri: imgSrc }
+                      }
+                    />
                   </FlexBox>
-                </TouchableWithoutFeedback>
+                ) : (
+                  <></>
+                )}
               </FlexBox>
             ) : (
               <></>
             )}
 
             <InputBox
-              title="소속"
-              changeCallback={setClubText}
-              textValue={clubText}
+              title="지역"
+              changeCallback={setLocationText}
+              textValue={locationText}
+              isRequired={needIdCard}
+              placeholder="입력 해주세요."
             />
 
             <FlexBox
@@ -458,31 +532,34 @@ export default function NewNameScreen({ navigation }) {
                     onChangeText={setBirthDayYearValue}
                     value={birthDayYearValue}
                     maxWidth="37%"
-                    placeholder="1997(년)"
+                    placeholder="1997"
                     placeholderTextColor={colorStyle.backgroundColor}
                     style={{ outline: "none", minWidth: "37%" }}
                     cursorColor={colorStyle.darkGray}
                     selectionColor={colorStyle.darkGray}
+                    keyboardType="numeric"
                   />
                   <StyledTextInput
                     onChangeText={setBirthDayMonthValue}
                     value={birthDayMonthValue}
                     maxWidth="30%"
-                    placeholder="3(월)"
+                    placeholder="3"
                     placeholderTextColor={colorStyle.backgroundColor}
                     style={{ outline: "none", minWidth: "30%" }}
                     cursorColor={colorStyle.darkGray}
                     selectionColor={colorStyle.darkGray}
+                    keyboardType="numeric"
                   />
                   <StyledTextInput
                     onChangeText={setBirthDayValue}
                     value={birthDayValue}
                     maxWidth="30%"
-                    placeholder="24(일)"
+                    placeholder="24"
                     placeholderTextColor={colorStyle.backgroundColor}
                     style={{ outline: "none", minWidth: "30%" }}
                     cursorColor={colorStyle.darkGray}
                     selectionColor={colorStyle.darkGray}
+                    keyboardType="numeric"
                   />
                 </FlexBox>
 
@@ -500,6 +577,7 @@ export default function NewNameScreen({ navigation }) {
               title="성씨"
               changeCallback={setLastNameText}
               textValue={lastNameText}
+              placeholder="입력 해주세요."
             />
 
             <CheckBox
@@ -524,55 +602,61 @@ export default function NewNameScreen({ navigation }) {
               changeCallback={setAdvantageText}
               textValue={advantageText}
               multiline={true}
+              placeholder="자랑 해주세요."
             />
-
-            <FlexBox
-              style={{
-                marginBottom: 10,
-                width: "100%",
-              }}
-              align="flex-start"
-              justify="space-between"
-            >
-              <FlexBox style={{ flex: 3 }}>
-                <CustomText>{"싸인"}</CustomText>
-                <CustomText color={colorStyle.headerColor}>{"*"}</CustomText>
-              </FlexBox>
-              <FlexBox style={{ flex: 7 }} justify="flex-end">
-                <TouchableWithoutFeedback
-                  onPress={() => {
-                    setSignModalVisible((prev) => !prev);
-                  }}
-                >
-                  <MaterialCommunityIcons
-                    name="file-sign"
-                    size={24}
-                    color="black"
-                  />
-                </TouchableWithoutFeedback>
-              </FlexBox>
-            </FlexBox>
-            <FlexBox style={{ width: "100%" }} justify="flex-end">
-              {signature !== "" && typeof signature === "string" && (
+            {!needIdCard && (
+              <>
                 <FlexBox
                   style={{
-                    width: 200,
-                    height: 200,
-                    backgroundColor: colorStyle.white,
+                    marginBottom: 10,
+                    width: "100%",
                   }}
-                  direction="column"
+                  align="flex-start"
+                  justify="space-between"
                 >
-                  <Image
-                    resizeMode={"contain"}
-                    source={{ uri: signature }}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                    }}
-                  />
+                  <FlexBox style={{ flex: 3 }}>
+                    <CustomText>{"싸인"}</CustomText>
+                    <CustomText color={colorStyle.headerColor}>
+                      {"*"}
+                    </CustomText>
+                  </FlexBox>
+                  <FlexBox style={{ flex: 7 }} justify="flex-end">
+                    <TouchableWithoutFeedback
+                      onPress={() => {
+                        setSignModalVisible((prev) => !prev);
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="file-sign"
+                        size={24}
+                        color="black"
+                      />
+                    </TouchableWithoutFeedback>
+                  </FlexBox>
                 </FlexBox>
-              )}
-            </FlexBox>
+                <FlexBox style={{ width: "100%" }} justify="flex-end">
+                  {signature !== "" && typeof signature === "string" && (
+                    <FlexBox
+                      style={{
+                        width: 200,
+                        height: 200,
+                        backgroundColor: colorStyle.white,
+                      }}
+                      direction="column"
+                    >
+                      <Image
+                        resizeMode={"contain"}
+                        source={{ uri: signature }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                        }}
+                      />
+                    </FlexBox>
+                  )}
+                </FlexBox>
+              </>
+            )}
 
             <TouchableWithoutFeedback onPress={handleSave}>
               <FlexBox
@@ -583,12 +667,26 @@ export default function NewNameScreen({ navigation }) {
               </FlexBox>
             </TouchableWithoutFeedback>
           </CenterContainer>
+
           <View style={styles.centeredView}>
             <CustomModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
-              msg="필수 항목 확인 부탁"
-              title="Error!"
+              msg="필수 항목 확인 부탁 (* 표시)"
+              title={
+                <FlexBox>
+                  <Image
+                    source={warning}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      marginRight: 3,
+                      marginLeft: 5,
+                    }}
+                  />
+                  <CustomText color={colorStyle.white}>Error!</CustomText>
+                </FlexBox>
+              }
             />
           </View>
 
@@ -642,6 +740,40 @@ export default function NewNameScreen({ navigation }) {
               title="싸인해 주세요."
             />
           </View>
+
+          <BottomSheet
+            btsVisible={btsVisible}
+            setBtsVisible={setBtsVisible}
+            header="사진 옵션 선택"
+            body={
+              <FlexBox direction="column" style={{ width: "100%" }}>
+                {photoSelArr.map((item, idx) => {
+                  return (
+                    <Fragment key={item + " " + idx}>
+                      <TouchableHighlight
+                        activeOpacity={0.2}
+                        onPress={() => {
+                          handleBts(idx);
+                        }}
+                      >
+                        <FlexBox
+                          style={{
+                            minHeight: 50,
+                            paddingLeft: 5,
+                            width: "100%",
+                          }}
+                        >
+                          <CustomText>{item}</CustomText>
+                        </FlexBox>
+                      </TouchableHighlight>
+
+                      {idx === 0 ? <BorderLine /> : <></>}
+                    </Fragment>
+                  );
+                })}
+              </FlexBox>
+            }
+          ></BottomSheet>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
