@@ -30,7 +30,7 @@ const ModalContainer = styled(FlexBox)`
   box-shadow: 0 2px ${colorStyle.black};
   shadow-opacity: 0.25;
   shadow-radius: 4px;
-  elevation: 5;
+  ${"" /* elevation: 5; */}
 `;
 
 export const WindowBox = ({

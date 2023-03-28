@@ -5,7 +5,6 @@ import {
   MaterialCommunityIcons,
   MaterialIcons,
 } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import * as MediaLibrary from "expo-media-library";
 import moment from "moment";
@@ -23,10 +22,12 @@ import {
   View,
 } from "react-native";
 import ViewShot, { captureRef } from "react-native-view-shot";
+import { useRecoilState } from "recoil";
 import styled from "styled-components/native";
 import { Barcode, CustomModal, CustomText, FlexBox } from "../components";
+import { needUpdateState } from "../lib/data/atom";
 import { colorStyle } from "../lib/data/styleData";
-import { makeNameUtil } from "../lib/util";
+import { makeNameUtil, storageUtil } from "../lib/util";
 
 const styles = StyleSheet.create({
   container: {
@@ -63,6 +64,7 @@ const BorderLine = styled(FlexBox)`
 export default function ReceiptScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isNameSet, setIsNameSet] = useState(false);
+  const [needUpdate, setNeedUpdate] = useRecoilState(needUpdateState);
 
   const nameKeyArr = ["first name", "middle name", "last name"];
   const [newName, setNewName] = useState([
@@ -90,6 +92,7 @@ export default function ReceiptScreen({ navigation, route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [permissionStatus, requestPermission] = MediaLibrary.usePermissions();
   const [isSaveBtnClicked, setIsSaveBtnClicked] = useState(false);
+  const [randomNum, setRandomNum] = useState("");
 
   const [windowWidth, setWindowWidth] = useState(0);
   const [targetHeight, setTargetHeight] = useState(0);
@@ -141,6 +144,7 @@ export default function ReceiptScreen({ navigation, route }) {
       const days = moment().diff(birthday, "days");
       return days;
     });
+    setRandomNum(generateRandomCode(15, "no."));
   }, []);
 
   const handleRefresh = () => {
@@ -242,10 +246,14 @@ export default function ReceiptScreen({ navigation, route }) {
             : "갤러리에 저장이 되었습니다.";
         Alert.alert(msg);
         setIsSaveBtnClicked(false);
-        storeData({
+        const result = await storageUtil.storeData({
           name: totalName,
           content: localUri,
+          number: randomNum,
         });
+        console.log("##result", result);
+        console.log("##needUpdate2", needUpdate);
+        if (result === "success") setNeedUpdate(true);
       }
     } catch (e) {
       console.log("##error onSaveImageAsync", e);
@@ -260,31 +268,6 @@ export default function ReceiptScreen({ navigation, route }) {
       onSaveImageAsync();
   }, [permissionStatus]);
 
-  const storeData = async (value) => {
-    try {
-      let originData = getData();
-      console.log("##originData", originData);
-      const jsonValue = JSON.stringify(value);
-      if (Array.isArray(originData)) {
-        originData.push(jsonValue);
-        await AsyncStorage.setItem("@name_list", JSON.stringify(jsonValue));
-      } else {
-        await AsyncStorage.setItem("@name_list", JSON.stringify([jsonValue]));
-      }
-    } catch (e) {
-      // saving error
-    }
-  };
-
-  const getData = async () => {
-    try {
-      const jsonValue = await AsyncStorage.getItem("@name_list");
-      return jsonValue != null ? JSON.parse(jsonValue) : null;
-    } catch (e) {
-      // error reading value
-    }
-  };
-
   return (
     <View style={styles.container}>
       {isLoading ? (
@@ -298,7 +281,6 @@ export default function ReceiptScreen({ navigation, route }) {
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-
             width: windowWidth,
           }}
           directionalLockEnabled={true}
@@ -365,9 +347,7 @@ export default function ReceiptScreen({ navigation, route }) {
                   <CustomText>* * * R E C E I P T * * *</CustomText>
                 </FlexBox>
                 <FlexBox>
-                  <CustomText>
-                    {"No." + generateRandomCode(15, "no.")}
-                  </CustomText>
+                  <CustomText>{"No." + randomNum}</CustomText>
                 </FlexBox>
               </FlexBox>
 

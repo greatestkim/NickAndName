@@ -12,10 +12,14 @@ import {
   Platform,
   SafeAreaView,
   TouchableHighlight,
+  TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
+
+import { useRecoilState, useResetRecoilState } from "recoil";
 import styled from "styled-components/native";
 import bear from "../assets/images/icons/bear.png";
+import bin from "../assets/images/icons/bin_filled.png";
 import file_pencil from "../assets/images/icons/file_pencil.png";
 import find from "../assets/images/icons/find_file.png";
 import folder from "../assets/images/icons/folder_32.png";
@@ -26,18 +30,22 @@ import newImg from "../assets/images/icons/new.png";
 import no_permission from "../assets/images/icons/no_permission.png";
 import programs from "../assets/images/icons/programs.png";
 import settings from "../assets/images/icons/settings.png";
+import warning from "../assets/images/icons/warning.png";
 import window_logo from "../assets/images/icons/window_logo.png";
 import {
   BottomSheet,
   CustomButton,
+  CustomModal,
   CustomText,
   FlexBox,
   InputBox,
   WindowBox,
 } from "../components";
+import { needUpdateState, storageListState } from "../lib/data/atom";
 import { colorStyle, randomImgList } from "../lib/data/styleData";
 import nameList from "../lib/nameCollection.json";
 import tmpNameList from "../lib/tmpCollection.json";
+import { storageUtil } from "../lib/util";
 
 const MainContainer = styled(FlexBox).attrs({
   direction: "column",
@@ -46,6 +54,21 @@ const MainContainer = styled(FlexBox).attrs({
   height: 100%;
   width: 100%;
   position: relative;
+`;
+
+const BackgroundContainer = styled(FlexBox).attrs({
+  direction: "column",
+  align: "flex-start",
+})`
+  flex-wrap: wrap;
+  position: absolute;
+  z-index: 40;
+  top: 60px;
+  left: 0;
+  width: ${Dimensions.get("window").width}px;
+  height: ${Dimensions.get("window").height / 3}px;
+  padding: 10px;
+  overflow: hidden;
 `;
 
 const ControlBar = styled(FlexBox).attrs({
@@ -58,7 +81,7 @@ const ControlBar = styled(FlexBox).attrs({
   border-top-color: ${colorStyle.white};
   padding: 2px;
   position: relative;
-  z-index: 42;
+  z-index: 52;
 `;
 
 const StartBtn = styled(FlexBox).attrs({})`
@@ -102,6 +125,7 @@ const ParentsMenuContainer = styled(FlexBox).attrs({
   border-right-color: ${colorStyle.darkGray};
   position: absolute;
   top: -254px;
+  z-index: 55;
 `;
 
 const ChildMenuContainer = styled(FlexBox).attrs({
@@ -145,7 +169,7 @@ const ChildMenuItem = styled(FlexBox).attrs({
   padding-right: 5px;
 `;
 
-export default function MainScreen({ navigation }) {
+export default function MainScreen({ navigation, route }) {
   const [isShowMenu, setIsShowMenu] = useState(false);
   const [isShowChildMenu, setIsShowChildMenu] = useState("");
   const [windowVisible, setWindowVisible] = useState(true);
@@ -165,6 +189,10 @@ export default function MainScreen({ navigation }) {
   const [btsVisible, setBtsVisible] = useState(false);
   const photoSelArr = ["기본 사진 선택", "사진 라이브러리에서 선택"];
   const [imgManageIdx, setImgManageIdx] = useState(0);
+  const [storageData, setStorageData] = useRecoilState(storageListState);
+  const resetStorage = useResetRecoilState(storageListState);
+  const [needUpdate, setNeedUpdate] = useRecoilState(needUpdateState);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const pageArr = [
     {
@@ -310,9 +338,37 @@ export default function MainScreen({ navigation }) {
       }
     }
   };
+
+  useEffect(() => {
+    const getStorageData = async () => {
+      const data = await storageUtil.getData();
+      console.log("##data", data);
+      if (Array.isArray(data) && data.length > 0) setStorageData(data);
+      setNeedUpdate(false);
+    };
+    console.log("##route.params", route?.params);
+    // if (
+    //   (route.params &&
+    //     Object.prototype.hasOwnProperty.call(route.params, "needUpdate") &&
+    //     route.params.needUpdate) ||
+    //   needUpdate
+    // ) {
+    //   getStorageData();
+    // }
+    if (needUpdate) {
+      getStorageData();
+    }
+    console.log("##needUpdate", needUpdate);
+  }, [needUpdate]);
+
+  useEffect(() => {
+    console.log("##storageData", storageData);
+  }, [storageData]);
+
   useEffect(() => {
     //nameFunc();
     return () => {
+      setNeedUpdate(false);
       setIsShowMenu(false);
       setInputWindowDelete(true);
       setNameText("");
@@ -433,48 +489,85 @@ export default function MainScreen({ navigation }) {
                 Nick's name Maker
               </CustomText>
             </FlexBox>
-            <FlexBox
-              direction="column"
-              align="flex-start"
-              style={{
-                position: "absolute",
-                zIndex: 40,
-                top: 60,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                padding: 20,
-              }}
-            >
-              <TouchableHighlight onPress={() => {}}>
+
+            <BackgroundContainer>
+              <TouchableOpacity
+                onPress={async () => {
+                  await storageUtil.clearAll();
+                  resetStorage();
+                }}
+              >
                 <FlexBox
                   direction="column"
                   style={{ marginBottom: 10, marginLeft: 10 }}
                 >
                   <Image
-                    source={folder}
+                    source={bin}
                     style={{
                       width: 32,
                       height: 32,
                       marginBottom: 2,
                     }}
                   />
-                  <CustomText
-                    color={colorStyle.white}
-                    style={{
-                      textOverflow: "ellipsis",
-                      width: 80,
-                      overflow: "hidden",
-                      whiteSpace: "nowrap",
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    연 가은dmdmdmdmdmdmdmdmdmdmddmdmddmdmddmdmdm
-                  </CustomText>
+                  <FlexBox style={{ width: 80 }} justify="center">
+                    <CustomText
+                      color={colorStyle.white}
+                      style={{
+                        textOverflow: "ellipsis",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                      }}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      휴지통
+                    </CustomText>
+                  </FlexBox>
                 </FlexBox>
-              </TouchableHighlight>
-            </FlexBox>
+              </TouchableOpacity>
+              {storageData &&
+                Array.isArray(storageData) &&
+                storageData.map((data, idx) => {
+                  return (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const params = { ...data, index: idx };
+                        navigation.navigate("FolderContent", params);
+                      }}
+                      key={data.number + data.name}
+                    >
+                      <FlexBox
+                        direction="column"
+                        style={{ marginBottom: 10, marginLeft: 10 }}
+                      >
+                        <Image
+                          source={folder}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            marginBottom: 2,
+                          }}
+                        />
+                        <FlexBox style={{ width: 80 }} justify="center">
+                          <CustomText
+                            color={colorStyle.white}
+                            style={{
+                              textOverflow: "ellipsis",
+                              width: 80,
+                              overflow: "hidden",
+                              whiteSpace: "nowrap",
+                            }}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {data.name}
+                          </CustomText>
+                        </FlexBox>
+                      </FlexBox>
+                    </TouchableOpacity>
+                  );
+                })}
+            </BackgroundContainer>
 
             {inputWindowVisible ? (
               <FlexBox
@@ -792,18 +885,20 @@ export default function MainScreen({ navigation }) {
                                             <TouchableHighlight
                                               onPress={() => {
                                                 setIsShowMenu(false);
-                                                if (
-                                                  childItem.nav ===
-                                                  "setInputWindowVisible"
-                                                )
-                                                  setInputWindowVisible(true);
-                                                else {
-                                                  setInputWindowDelete(true);
+                                                if (storageData.length < 10) {
+                                                  if (
+                                                    childItem.nav ===
+                                                    "setInputWindowVisible"
+                                                  )
+                                                    setInputWindowVisible(true);
+                                                  else {
+                                                    setInputWindowDelete(true);
 
-                                                  navigation.navigate(
-                                                    childItem.nav
-                                                  );
-                                                }
+                                                    navigation.navigate(
+                                                      childItem.nav
+                                                    );
+                                                  }
+                                                } else setModalVisible(true);
                                               }}
                                             >
                                               <ChildMenuItem>
@@ -899,6 +994,25 @@ export default function MainScreen({ navigation }) {
             </FlexBox>
           }
         ></BottomSheet>
+        <CustomModal
+          modalVisible={modalVisible}
+          setModalVisible={setModalVisible}
+          msg="이름은 최대 10개 까지만 만들 수 있어요. 다른 이름을 생성하고 싶다면 폴더를 삭제해주세요."
+          title={
+            <FlexBox>
+              <Image
+                source={warning}
+                style={{
+                  width: 22,
+                  height: 22,
+                  marginRight: 3,
+                  marginLeft: 5,
+                }}
+              />
+              <CustomText color={colorStyle.white}>Error!</CustomText>
+            </FlexBox>
+          }
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

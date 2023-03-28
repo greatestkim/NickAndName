@@ -8,6 +8,7 @@ export const CustomText = ({
   color,
   numberOfLines,
   ellipsizeMode,
+  textAlign,
   ...rest
 }) => {
   return (
@@ -19,8 +20,7 @@ export const CustomText = ({
             : "Galmuri",
         fontSize: fontSize,
         color: color,
-        // overflowWrap: "break-word",
-        // wordWrap: "break-word",
+        textAlign: textAlign,
         ...rest.style,
       }}
       numberOfLines={numberOfLines}
